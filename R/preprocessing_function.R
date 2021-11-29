@@ -1,4 +1,23 @@
 
+
+#' Filtering singlets
+#'
+#' Double checking for singlets by looking `FSC-A` and `FSC-H` channels
+#' @param fC flowCore with the preprocess FCS data.
+#' @param chnl channels used to identify singlets. Default  `FSC-A` and `FSC-H`.
+#' @keywords singlets
+#' @export
+#' @examples
+#' filter_singlets()
+filter_singlets <- function(fC, chnl = c("FSC-A", "FSC-H")){
+  fC_PeacoQC <- PeacoQC::RemoveDoublets(fC, channel1 = chnl[1], channel2 = chnl[2])
+  gate_singlet <- openCyto:::.singletGate(fC_PeacoQC, channels = chnl)
+  idt_singlet <- flowCore::filter(fC_PeacoQC, gate_singlet)@subSet
+  fC_singlet <- fC_PeacoQC
+  fC_singlet@exprs <- fC_PeacoQC@exprs[idt_singlet, ]
+  return(fC_singlet)
+}
+
 #' Preproccessing Function
 #'
 #' This function allows run preprocessing analysis for raw FCS file. It does the compensation and
@@ -6,11 +25,12 @@
 #' @param file path to the file FCS to run.
 #' @param filename filename for the cleaned FCS.
 #' @param output path to the location for the cleaned FCS.
+#' @param report should report number of anomalies and doublets. Default set to TRUE.
 #' @keywords preprocessing
 #' @export
 #' @examples
 #' run_Preprocessing()
-run_Preprocessing <- function(file, filename, output){
+run_Preprocessing <- function(file, filename, output, report=T){
 
   if(!dir.exists(output)){
     message("Creating directory -->", output)
@@ -25,29 +45,31 @@ run_Preprocessing <- function(file, filename, output){
   ff <- flowCore::read.FCS(file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
-  ff_QC <- flowAI::flow_auto_qc(ff_comp, ChExcludeFS = NULL, ChExcludeFM=NULL, html_report=F, fcs_QC=F, mini_report="Preprocessing", folder_results=paste0(output, "/resultsQC"))
-  ff_singlet <- PeacoQC::RemoveDoublets(ff_QC)
+  res_QC <- flow_auto_qc_custom(ff_comp, filename = filename, ChExcludeFS = NULL, ChExcludeFM=NULL, mini_report="Preprocessing", folder_results=paste0(output, "/resultsQC"))
+  ff_QC <- res_QC$FCS
+  ff_singlet <- filter_singlets(ff_QC)
+  res_QC$minireport$RemoveDoublets <- nrow(ff_QC@exprs)-nrow(ff_singlet@exprs)
+
   flowCore::write.FCS(ff_singlet, filename = paste0(output, "/", filename))
 
+  if(report){
+    reporte_filename <- paste0(output, "/resultsQC/Preprocessing.txt")
+    if(!dir.exists(paste0(output, "/resultsQC"))) dir.create(paste0(output, "/resultsQC"))
+    write.table(
+      x = res_QC$minireport,
+      file = reporte_filename
+      , col.names = !file.exists(reporte_filename)
+      , sep = "\t"
+      , row.names = F
+      , append = file.exists(reporte_filename)
+      , quote = F
+    )
+  }
+
 }
 
 
-#' Filtering singlets
-#'
-#' Double checking for singlets by looking `FSC-A` and `FSC-H` channels
-#' @param fC flowCore with the preprocess FCS data.
-#' @param chnl channels used to identify singlets. Default  `FSC-A` and `FSC-H`.
-#' @keywords singlets
-#' @export
-#' @examples
-#' filter_singlets()
-filter_singlets <- function(fC, chnl = c("FSC-A", "FSC-H")){
-  gate_singlet <- openCyto:::.singletGate(fC, channels = chnl)
-  idt_singlet <- flowCore::filter(fC, gate_singlet)@subSet
-  fC_singlet <- fC
-  fC_singlet@exprs <- fC@exprs[idt_singlet, ]
-  return(fC_singlet)
-}
+
 
 #' Simplify flowCore object
 #'
