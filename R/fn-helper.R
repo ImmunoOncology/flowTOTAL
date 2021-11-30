@@ -117,17 +117,6 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
 
   goodfcs <- flowCore::flowFrame(exprs = sub_exprs[goodCellIDs, ], parameters = params, description = keyval)
 
-
-  minireport <- paste0(folder_results, mini_report,
-                         ".txt")
-  if (!file.exists(minireport)) {
-    write.table(t(c("Name file", "n. of events pre-filter", "n. of events post-filter",
-                    "% anomalies", "analysis from", "% anomalies flow Rate",
-                    "% anomalies Signal", "% anomalies Margins")),
-                minireport, sep = "\t", row.names = FALSE,
-                quote = FALSE, col.names = FALSE)
-  }
-
   n_total <- as.integer(dim(set[[i]])[1])
   df_minireport <- data.frame(File=filename, N.initial.events=n_total,
                        FlowRateQC=n_total-length(FlowRateQC$goodCellIDs),
