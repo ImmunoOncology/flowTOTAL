@@ -17,62 +17,95 @@ library(ggplot2)
 library(openCyto)
 library(ggcyto)
 
-do_bg_pca <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg){
+do_bg_pca <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, min.count = 5000){
 
-  res.pca <- prcomp(ff@exprs[, c(channel_bg, chnl[1], chnl[2])], scale = TRUE)
-  my_clusters <- ClusterR::KMeans_rcpp(res.pca$x, 3)
-  my_clusters_bg <- ClusterR::KMeans_rcpp(ff@exprs[, c(channel_bg, chnl[2])], 3)
   bg_filter <- openCyto::gate_flowclust_1d(fr=ff, channel_bg, K=2)
-  idt_cluster <- which((table(my_clusters$clusters[ff@exprs[, channel_bg]>bg_filter@min])/table(my_clusters$clusters))>0.9)
-  list_centroid <- list()
-  list_bg_filter <- list()
+  if(bg_filter@min<min.count) bg_filter@min <- min.count
+  chnl_filter <- openCyto::gate_flowclust_1d(fr=ff, chnl[2], K=2)
+  idt <- ff@exprs[, channel_bg]>bg_filter@min & ff@exprs[, chnl[2]]<chnl_filter@min
 
-  # p1 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)
-  # p2 <- ggcyto::autoplot(ff[my_clusters$clusters%in%idt_cluster, ], x = chnl[1], y = chnl[2], bins = 100)+
-  #   xlim(range(ff@exprs[, chnl[1]]))+ylim(range(ff@exprs[, chnl[2]]))
-  # for(cluster in idt_cluster){
-  #   list_centroid[[cluster]] <- colMeans(ff@exprs[my_clusters$clusters==cluster, c(chnl[1], chnl[2])])
-  #   list_bg_filter[[cluster]] <- openCyto::gate_flowclust_2d(fr=ff[my_clusters$clusters==cluster, ], quantile = 0.99, xChannel = chnl[1], yChannel = chnl[2], K=3,target = list_centroid[[cluster]])
-  #   p1 <- p1 + ggcyto::geom_gate(list_bg_filter[[cluster]])
-  #   p2 <- p2 + ggcyto::geom_gate(list_bg_filter[[cluster]])
-  # }
-  # p3 <- ggcyto::autoplot(ff, x = channel_bg, y = chnl[2], bins = 100)+ggcyto::geom_gate(bg_filter)
-  # p4 <- ggcyto::autoplot(ff[my_clusters$clusters==idt_cluster, ], x = channel_bg, y = chnl[2], bins = 100)+ggcyto::geom_gate(bg_filter)+
-  #   xlim(range(ff@exprs[, channel_bg]))+ylim(range(ff@exprs[, chnl[2]]))
-  # p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3), as.ggplot(p4)))
+  peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[1]], num_peaks = 1)
+  peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[2]], num_peaks = 1)
 
-  idt_bg <- ff@exprs[, channel_bg]>bg_filter@min
-  idt <- which(table(my_clusters_bg$clusters[idt_bg], my_clusters$clusters[idt_bg])==max(table(my_clusters_bg$clusters[idt_bg], my_clusters$clusters[idt_bg])), arr.ind = TRUE)
-  cells <- my_clusters$clusters==idt[, "row"] & my_clusters_bg$clusters==idt[, "col"]
-  centroid <- colMeans(ff@exprs[cells & idt_bg, c(chnl[1], chnl[2])])
-  bg_filter_v2 <- openCyto::gate_flowclust_2d(fr=ff[cells & idt_bg, ], quantile = 0.99, xChannel = chnl[1], yChannel = chnl[2], K=3,target = centroid)
+  k <- nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[1]]))*nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[2]]))
 
-  p1 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+ggcyto::geom_gate(bg_filter_v2)
-  p1 <- ggcyto::autoplot(ff[cells & idt_bg, ], x = chnl[1], y = chnl[2], bins = 100)+ggcyto::geom_gate(bg_filter_v2)
-  p2 <- ggcyto::autoplot(ff, x = channel_bg, y = chnl[2], bins = 100)+ggcyto::geom_gate(bg_filter)
-  idt <- sample(1:nrow(res.pca$x), 0.3*nrow(res.pca$x))
-  p3 <- ggplot(as.data.frame(res.pca$x[idt, c(1,2)]), aes(x=PC1, y=PC2))+geom_point(aes(col=my_clusters$clusters[idt]))
-  p4 <- ggplot(as.data.frame(ff@exprs)[idt, ], aes(x=`FSC-A`, y=`SSC-A`))+geom_point(aes(col=my_clusters$clusters[idt]))
+  filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.99, xChannel = chnl[1], yChannel = chnl[2], K=6,target = c(peaks_chnl1$x[1], peaks_chnl2$x[1]))
+  p1 <- ggcyto::autoplot(ff, x = chnl[2], y = channel_bg, bins = 100)+geom_gate(bg_filter)+geom_gate(chnl_filter)
+  p2 <- ggcyto::autoplot(ff[idt, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)+
+    xlim(range(ff@exprs[, chnl[1]]))+ylim(range(ff@exprs[, chnl[2]]))
+  p3 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)
 
-  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), (p3), (p4)))
+  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3)))
+  ggsave(paste0(output.dir, "/", filename, ".pdf"), plot = p, device = "pdf", width = 18, height = 12)
+}
+
+do_double_bg_pca <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, min.count = 10000){
+
+  #bg_filter <- openCyto::gate_flowclust_1d(fr=ff, channel_bg, K=2)
+  #if(bg_filter@min<min.count) bg_filter@min <- min.count
+  chnl_filter <- openCyto::gate_flowclust_1d(fr=ff, chnl[2], K=2)
+  idt <- ff@exprs[, chnl[2]]<chnl_filter@min
+  bg_filter <- openCyto::gate_flowclust_1d(fr=ff[idt, ], channel_bg, K=2)
+  if(bg_filter@min<min.count) bg_filter@min <- min.count
+  idt <- ff@exprs[, channel_bg]>bg_filter@min & ff@exprs[, chnl[2]]<chnl_filter@min
+
+  peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[1]], num_peaks = 1)
+  peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[2]], num_peaks = 1)
+
+  k <- nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[1]]))*nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[2]]))
+
+  filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.99, xChannel = chnl[1], yChannel = chnl[2], K=6,target = c(peaks_chnl1$x[1], peaks_chnl2$x[1]))
+  p1 <- ggcyto::autoplot(ff, x = chnl[2], y = channel_bg, bins = 100)+geom_gate(bg_filter)+geom_gate(chnl_filter)
+  p2 <- ggcyto::autoplot(ff[idt, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)+
+    xlim(range(ff@exprs[, chnl[1]]))+ylim(range(ff@exprs[, chnl[2]]))
+  p3 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)
+
+  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3)))
   ggsave(paste0(output.dir, "/", filename, ".pdf"), plot = p, device = "pdf", width = 18, height = 12)
 }
 
 
-rownames(metadata_panel1) <- 1:nrow(metadata_panel1)
-for(i in 1:nrow(metadata_panel1)){
-  filename_clean <- metadata_panel1$filename_clean[i]
-  ff <- flowCore::read.FCS(filename_clean)
-  channel_bg <- as.vector(ff@parameters@data$name[which(ff@parameters@data$desc=="CD3")])
-  output.dir <- "/Volumes/TRANSCEND/IBIMA/Citometria/pruebas"
-  filename <- unlist(strsplit(filename_clean, "/"))
-  filename <- filename[length(filename)]
-  filename <- gsub(".fcs$", "", filename)
-  filename <- paste0(filename, "-", i)
-  do_bg_pca(ff, filename = filename, channel_bg = channel_bg, output.dir = output.dir)
+log_file <- "/Volumes/ExtremeSSD/IBIMA/Citometria/Log_file_error.txt"
+log_file_error <- function(messages){
+  sink(log_file, append = T)
+  for(i in messages){
+    cat(i, "\n")
+  }
+  sink()
 }
 
 
+metadata_panel1 <- metadata[metadata$panel%in%"Panel2", ]
+rownames(metadata_panel1) <- 1:nrow(metadata_panel1)
+
+
+cl <- parallel::makeCluster(6, setup_strategy = "sequential")
+doParallel::registerDoParallel(cl)
+library(doParallel)
+system.time(clean <- foreach(i = 1:nrow(metadata_panel1)) %dopar% {
+  tryCatch({
+    library(flowCore)
+    library(ggcyto)
+    library(ggplot2)
+    library(openCyto)
+    filename_clean <- metadata_panel1$filename_clean[i]
+    ff <- flowCore::read.FCS(filename_clean)
+    channel_bg <- as.vector(ff@parameters@data$name[which(ff@parameters@data$desc=="CD4")])
+    output.dir <- "/Volumes/TRANSCEND/IBIMA/Citometria/pruebas"
+    filename <- unlist(strsplit(filename_clean, "/"))
+    filename <- filename[length(filename)]
+    filename <- gsub(".fcs$", "", filename)
+    filename <- paste0(filename, "-", i)
+    do_bg_pca(ff, filename = filename, channel_bg = channel_bg, output.dir = output.dir)
+   },
+  error=function(e) {
+    log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
+    return(e)
+  })
+
+})
+
+parallel::stopCluster(cl)
 
 
 ggcyto::autoplot(ff[my_clusters$clusters==1, ], x = "FSC-A", y = "SSC-A", bins = 100)
