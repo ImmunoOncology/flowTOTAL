@@ -87,104 +87,8 @@ simplify_flowCore <- function(fC, shape_channel = c("FSC-A", "FSC-H", "SSC-A", "
 }
 
 
-do_backgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, channel_filter = c("SSC-A"), cutpoint_min = 5000, cutpoint_max = 50000){
+apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TRUE, join=T){
 
-  # Identify direction
-  channel_sign <- paste0("[", sapply(channel_bg, function(x) substr(x, nchar(x), nchar(x))))
-  channel_bg <-  sapply(channel_bg, function(x) substr(x, 1, nchar(x)-1))
-  names(channel_bg) <- channel_bg
-  `[+` <- function(a, b){ a>b}
-  `[-` <- function(a, b){ a<b}
-
-  # Apply gating to the backgating channel (OLD)
-  # gate_bg <- lapply(channel_bg, openCyto::gate_flowclust_1d, fr=ff, K=2, cutpoint_min=cutpoint_min)
-
-  # Track cells
-  idt <- rep(TRUE, nrow(ff@exprs))
-
-  # Add gate for each channel (OLD)
-  # for(i in length(gate_bg):1){
-  #   gate <- gate_bg[[i]]
-  #   events_bg <-  do.call(channel_sign[i], args = list(ff@exprs[, names(gate@min)], gate@min))
-  #   idt <- idt & events_bg
-  # }
-
-  # Filter bg channel iteratively
-  gate_bg <- list()
-  for(i in 1:length(channel_bg)){
-     gate <- openCyto::gate_flowclust_1d(fr=ff[idt, ], channel_bg[i], K=2, cutpoint_min=cutpoint_min, cutpoint_max = cutpoint_max)
-     events_bg <-  do.call(channel_sign[i], args = list(ff@exprs[, names(gate@min)], gate@min))
-     idt <- idt & events_bg
-     gate_bg[[i]] <- gate
-  }
-
-  # Look for the maximun peak in chnl1 and the peak with smallest complex
-  peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[2]], adjust = 1)
-  peaks_chnl2 <- peaks_chnl2[order(peaks_chnl2$x, decreasing = F), ]
-
-  # Increase adjusting to identify highest peaks
-  peaks_chnl22 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[2]], adjust = 2)
-  peaks_chnl22 <- peaks_chnl22[order(peaks_chnl22$x, decreasing = F), ]
-
-
-  # First bg clusters
-  #k <- nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[1]]))*nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[2]]))
-  k <- 2
-
-  # Identify maximun value for FSC and SSC
-  my_max <- c(
-    max(ff@exprs[idt, chnl[1]]),
-    ifelse(nrow(peaks_chnl22)==1, max(ff@exprs[idt, chnl[2]]), median(c(peaks_chnl22$x[1], peaks_chnl22$x[2])))
-  )
-
-  peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt & ff@exprs[, chnl[2]]<my_max[2], chnl[1]])
-  peaks_chnl1 <- peaks_chnl1[order(peaks_chnl1$y, decreasing = T), ]
-
-  # First filter based on cells that pass bg channel and are around a peak with small complex
-  filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.95, xChannel = chnl[1], yChannel = chnl[2], K=k,target = c(peaks_chnl1$x[1], peaks_chnl2$x[1]), max = my_max)
-
-  if(sum(idt)<200){
-    idt_v2 <- rep(FALSE, nrow(ff@exprs))
-    idt_v2[sample(1:length(idt_v2), 0.5*length(idt_v2))] <- TRUE
-    idt_v2 <- idt_v2 | idt
-    idt <- idt_v2
-    filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=5,target = c(50000, 1000))
-  }
-
-  # Secong bg clusters based on the first filter
-  k2 <- nrow(openCyto:::.find_peaks(ff@exprs[, chnl[1]]))*nrow(openCyto:::.find_peaks(ff@exprs[, chnl[2]]))
-  k2 <- min(6, k2)
-  k2 <- max(3, k2)
-  k2 <- 2
-
-  idt_v2 <- rep(FALSE, nrow(ff@exprs))
-  idt_v2[sample(1:length(idt_v2), 0.3*length(idt_v2))] <- TRUE
-  idt_v2 <- idt_v2 | filter(ff, filter)@subSet
-
-  filter_v2 <- openCyto::gate_flowclust_2d(fr=ff[idt_v2, ], quantile = 0.90, xChannel = chnl[1], yChannel = chnl[2], K=k2, target = c(filter@mean), max = my_max)
-
-  # In case of 1 backgating channel based, the second channel to be used is SSC-A
-  if(length(channel_bg)==1)
-    channel_bg <- c(channel_bg, channel_filter)
-
-
-  p1 <- ggcyto::autoplot(ff, x = channel_bg[1], y = channel_bg[2], bins = 100)
-  for(gate in gate_bg){
-    p1 <- p1 + ggcyto::geom_gate(gate)
-  }
-
-
-  p1 <- p1 + ggcyto::geom_gate(gate)
-  p2 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)+geom_gate(filter_v2, col = "blue")
-
-  p3 <- ggcyto::autoplot(ff[idt, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)
-  p4 <- ggcyto::autoplot(ff[idt_v2, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter_v2, col = "blue")
-
-  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3), as.ggplot(p4)), nrow = 2, ncol = 2)
-  ggsave(paste0(output.dir, "/", filename, ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
-}
-
-apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TRUE){
 
   # Identify direction
   channel_sign <- paste0("[", sapply(channel, function(x) substr(x, nchar(x), nchar(x))))
@@ -194,6 +98,12 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
   `[+` <- function(a, b){ a>b}
   `[-` <- function(a, b){ a<b}
 
+  `[+]` <- function(a){ min(a)*1.05 }
+  `[-]` <- function(a){ min(a)*1.05 }
+
+  `[+[` <- function(a){ max(a)*0.95 }
+  `[-[` <- function(a){ min(a)*1.05 }
+
   idt <- rep(TRUE, nrow(ff@exprs))
 
   # Filter bg channel iteratively
@@ -202,19 +112,31 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
     gate <- openCyto::gate_flowclust_1d(fr=ff, channel[i], K=2, cutpoint_min=cutpoint_min, cutpoint_max = cutpoint_max)
     events_bg <-  do.call(channel_sign[i], args = list(ff@exprs[, names(gate@min)], gate@min))
     idt <- idt & events_bg
-    gate_bg[[i]] <- gate
+    gate_bg[[channel[i]]] <- gate
   }
 
-  if(sum(idt)>200){
+  border <- list()
+  target <- list()
+
+  for(i in 1:length(channel)){
+    border[[channel[i]]] <- eval(call(paste0(channel_sign[i], "]"), ff@exprs[idt, channel[i]]))
+    target[[channel[i]]] <- eval(call(paste0(channel_sign[i], "["), ff@exprs[idt, channel[i]]))
+  }
+
+  border <- unlist(border)
+  target <- unlist(target)
+
+  if(sum(idt)>200 & join){
     gate_peak <- openCyto:::.find_peaks(ff@exprs[idt, channel[1]], adjust = 3)
-    gate_bg[["join"]] <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.9, xChannel = channel[1], yChannel = channel[2], K=2,target = c(gate_peak$x[nrow(gate_peak)], colMeans(ff@exprs[idt, channel])[2]), min.count = 100)
+    gate_bg[["join"]] <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.9, xChannel = channel[1], yChannel = channel[2], K=2, target = target, min.count = 100,
+                                                     min = border)
     idt <- idt & flowCore::filter(ff, gate_bg[["join"]])@subSet
   }
 
   result = list(idt=idt, channel=channel, gate_bg=gate_bg)
 
   if(return_plot){
-    p1 <- ggcyto::autoplot(ff, x = channel[1], y = channel[2], bins = 100)
+    p1 <- ggcyto::autoplot(ff, channel, bins = 100)
     for(gate in gate_bg){
       p1 <- p1 + ggcyto::geom_gate(gate)
     }
@@ -251,98 +173,149 @@ identify_cluster <- function(ff, chnl, idt){
   return(my_cluster)
 }
 
-do_backgating_cluster <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, channel_filter = c("SSC-A-"), cutpoint_min = 3000, cutpoint_max = 50000, downsampling = FALSE, n_sample = NULL){
+do_backgating_cluster <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, channel_filter = c("SSC-A-"), cutpoint_min = 1000, cutpoint_max = 50000, downsampling = FALSE, n_sample = NULL){
+
+  idt_final <- c()
 
   # In case of 1 backgating channel based, the second channel to be used is SSC-A
   if(length(channel_bg)==1)
     channel_bg <- c(channel_bg, channel_filter)
 
   result_gate <- apply_gate(ff = ff, channel = channel_bg, cutpoint_min = cutpoint_min, cutpoint_max = cutpoint_max, return_plot = TRUE)
-  idt <- result_gate$idt
-  p1 <- result_gate$plot
+  idt_bg <- result_gate$idt
   gate_bg <- result_gate$gate_bg
   channel_bg <- result_gate$channel
+  p1 <- do_ggcyto(ff, channel_bg, gate_bg, logicle_chnls = channel_bg[1])
 
-  if(sum(idt)<200){
-    idt_final <- rep(T, nrow(ff))
+  idt_downsample <- rep(FALSE, nrow(ff@exprs))
+  idt_downsample[sample(1:length(idt_downsample), 0.3*length(idt_downsample))] <- TRUE
+  idt_downsample <- idt_downsample | idt_bg
 
-    idt_v2 <- rep(FALSE, nrow(ff@exprs))
-    idt_v2[sample(1:length(idt_v2), 0.5*length(idt_v2))] <- TRUE
-    idt_v2 <- idt_v2 | idt
-    idt <- idt_v2
+  peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt_bg, chnl[1]], adjust = 4)
+  peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt_bg, chnl[2]], adjust = 4)
 
-    k2 <- nrow(openCyto:::.find_peaks(ff@exprs[idt_v2, chnl[1]], adjust = 3))*nrow(openCyto:::.find_peaks(ff@exprs[idt_v2, chnl[2]], adjust = 3))
-    k2 <- max(k2, 3)
-    k2 <- min(k2, 6)
+  cnt <- 1
+  gate_filter <- list()
 
-    my_filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=k2,target = c(50000, 12500))#, min = c(50000/2, 12500/2), max = c(50000*2, 12500*2))
-    idt_final <-  idt_final & flowCore::filter(ff, my_filter)@subSet
-    p3 <- ggcyto::autoplot(ff[idt, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(my_filter)
-    p4 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+geom_gate(my_filter)
+  for(num_peak in 1:nrow(peaks_chnl1)){
 
-    idt_final_v2 <- idt_final
+    # idt_downsample <- idt_downsample & (ff@exprs[, chnl[1]] > min(ff@exprs[idt_bg, chnl[1]]))
+    # idt_downsample <- idt_downsample & (ff@exprs[, chnl[2]] > min(ff@exprs[idt_bg, chnl[2]]))
 
-  }else{
+    k <- max(nrow(openCyto:::.find_peaks(ff@exprs[idt_bg, chnl[1]], adjust = 3)), nrow(openCyto:::.find_peaks(ff@exprs[idt_bg, chnl[2]], adjust = 3)))
+    k <- max(k, 3)
+    k <- min(k, 6)
 
-    my_cluster <- identify_cluster(ff = ff, chnl = chnl, idt = idt)
+    gate_filter[[cnt]] <- openCyto::gate_flowclust_2d(fr=ff[idt_downsample, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=k, target = colMeans(ff@exprs[idt_bg, chnl]))
 
-    peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[my_cluster, chnl[1]], adjust = 4)
-    peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[my_cluster, chnl[2]], adjust = 4)
+    if(sum(idt_bg)>200){
 
-    cnt <- 1
-    my_filter <- list()
+      border_min <- apply(ff@exprs[idt_bg, chnl], 2, min)
+      border_max <- apply(ff@exprs[idt_bg, chnl], 2, max)
 
-    p4 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)
-    p3 <- ggcyto::autoplot(ff[idt & my_cluster, ], x = chnl[1], y = chnl[2], bins = 100)
-    idt_final <- c()
-    idt_final_v2 <- c()
-    for(i in peaks_chnl1$x){
-      my_filter[[cnt]] <-  openCyto::gate_flowclust_2d(fr=ff[idt & my_cluster, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=nrow(peaks_chnl1), target = c(i, peaks_chnl2$x[1]))
-      p4 <- p4+geom_gate(my_filter[[cnt]])
-      p3 <- p3+geom_gate(my_filter[[cnt]])
-      iter <- flowCore::filter(ff, my_filter[[cnt]])@subSet
+      ff_iter <- ff[flowCore::filter(ff, gate_filter[[cnt]])@subSet, ]
+      ff_iter <- ff_iter[ff_iter@exprs[, chnl[1]]>border_min[1] & ff_iter@exprs[, chnl[1]]<border_max[1], ]
+      ff_iter <- ff_iter[ff_iter@exprs[, chnl[2]]>border_min[2] & ff_iter@exprs[, chnl[2]]<border_max[2], ]
 
-      idt_v2 <- rep(FALSE, nrow(ff@exprs))
-      idt_v2[sample(1:length(idt_v2), 0.3*length(idt_v2))] <- TRUE
-      idt_v2 <- idt_v2 | iter
-      idt_v2 <- idt_v2 & (ff@exprs[, chnl[1]] > min(ff@exprs[idt, chnl[1]]))
-      idt_v2 <- idt_v2 & (ff@exprs[, chnl[2]] > min(ff@exprs[idt, chnl[2]]))
-      my_filter_iter <- openCyto::gate_flowclust_2d(fr=ff[idt_v2, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=6,target = colMeans(ff@exprs[iter, chnl]), min = apply(ff@exprs[idt, chnl], 2, min))
-      p3 <- p3+geom_gate(my_filter_iter, col = "blue")
-      p4 <- p4+geom_gate(my_filter_iter, col = "blue")
-
-      if(length(idt_final)==0) idt_final <- iter
-      if(length(idt_final_v2)==0) idt_final_v2 <- flowCore::filter(ff, my_filter_iter)@subSet
-      idt_final <-  idt_final | iter
-      idt_final_v2 <- idt_final_v2 | flowCore::filter(ff, my_filter_iter)@subSet
-
-      cnt <- cnt+1
+      gate_filter[[cnt]] <- openCyto::gate_flowclust_2d(fr=ff_iter, quantile = 0.8, xChannel = chnl[1], yChannel = chnl[2], K=1, target = colMeans(ff_iter@exprs[, chnl]), min = border_min, max = border_max, min.count = 100)
     }
 
+    if(length(idt_final)==0) idt_final <- flowCore::filter(ff, gate_filter[[cnt]])@subSet
+
+    idt_final <- idt_final | flowCore::filter(ff, gate_filter[[cnt]])@subSet
+
+    cnt <- cnt+1
   }
 
-  p2 <- ggcyto::autoplot(ff[idt_final, ], x = channel_bg[1], y = channel_bg[2], bins = 100)
-  for(gate in gate_bg){
-    p2 <- p2 + ggcyto::geom_gate(gate)
-  }
+  p2 <- do_ggcyto(ff[idt_final, ], channel_bg, gate_bg)
+  p3 <- do_ggcyto(ff[idt_bg, ], chnl, gate_filter)
+  p4 <- do_ggcyto(ff, chnl, gate_filter)
 
-  p3 <- ggcyto::autoplot(ff[idt_final_v2, ], x = channel_bg[1], y = channel_bg[2], bins = 100)
-  for(gate in gate_bg){
-    p2 <- p2 + ggcyto::geom_gate(gate)
-  }
-
-  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3), as.ggplot(p4)), nrow = 2, ncol = 2)
+  p <- ggpubr::ggarrange(plotlist = list(p1, p2, p3, p4), nrow = 2, ncol = 2)
   #p <- as.ggplot(p1)
   ggsave(paste0(output.dir, "/PDF/", filename, ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
   flowCore::write.FCS(ff[idt_final, ], filename = paste0(output.dir, "/FCS/", filename, ".fcs"))
-  flowCore::write.FCS(ff[idt_final, ], filename = paste0(output.dir, "/FCS/", filename, "_blue.fcs"))
+}
+
+do_backgating_cluster_old <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, channel_filter = c("SSC-A-"), cutpoint_min = 3000, cutpoint_max = 50000, downsampling = FALSE, n_sample = NULL){
+
+  idt_final <- c()
+
+  # In case of 1 backgating channel based, the second channel to be used is SSC-A
+  if(length(channel_bg)==1)
+    channel_bg <- c(channel_bg, channel_filter)
+
+  result_gate <- apply_gate(ff = ff, channel = channel_bg, cutpoint_min = cutpoint_min, cutpoint_max = cutpoint_max, return_plot = TRUE)
+  idt_bg <- result_gate$idt
+  gate_bg <- result_gate$gate_bg
+  channel_bg <- result_gate$channel
+  p1 <- do_ggcyto(ff, channel_bg, gate_bg, logicle_chnls = channel_bg[1])
+
+  if(sum(idt_bg)<200){
+
+    idt_downsample <- rep(FALSE, nrow(ff@exprs))
+    idt_downsample[sample(1:length(idt_downsample), 0.3*length(idt_downsample))] <- TRUE
+    idt_downsample <- idt_downsample | idt_bg
+
+    k <- nrow(openCyto:::.find_peaks(ff@exprs[idt_downsample, chnl[1]], adjust = 3))*nrow(openCyto:::.find_peaks(ff@exprs[idt_downsample, chnl[2]], adjust = 3))
+    k <- max(k, 3)
+    k <- min(k, 6)
+
+    gate_filter <- openCyto::gate_flowclust_2d(fr=ff[idt_downsample, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=k,target = c(50000, 12500))
+    idt_final <-  flowCore::filter(ff, gate_filter)@subSet
+    gate_filter <- list(gate_filter)
+
+  }else{
+
+    idt_cluster <- identify_cluster(ff = ff, chnl = chnl, idt = idt_bg)
+
+    peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt_cluster, chnl[1]], adjust = 4)
+    peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt_cluster, chnl[2]], adjust = 4)
+
+    cnt <- 1
+    gate_filter <- list()
+
+    for(num_peak in 1:nrow(peaks_chnl1)){
+
+      gate_iter <-  openCyto::gate_flowclust_2d(fr=ff[idt_bg & idt_cluster, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=nrow(peaks_chnl1), target = c(peaks_chnl1$x[num_peak], peaks_chnl2$x[1]))
+      idt_iter <- flowCore::filter(ff, gate_iter)@subSet
+
+      idt_downsample <- rep(FALSE, nrow(ff@exprs))
+      idt_downsample[sample(1:length(idt_downsample), 0.3*length(idt_downsample))] <- TRUE
+      idt_downsample <- idt_downsample | idt_iter
+      idt_downsample <- idt_downsample & (ff@exprs[, chnl[1]] > min(ff@exprs[idt_bg, chnl[1]]))
+      idt_downsample <- idt_downsample & (ff@exprs[, chnl[2]] > min(ff@exprs[idt_bg, chnl[2]]))
+
+      k <- nrow(openCyto:::.find_peaks(ff@exprs[idt_downsample, chnl[1]], adjust = 3))*nrow(openCyto:::.find_peaks(ff@exprs[idt_downsample, chnl[2]], adjust = 3))
+      k <- max(k, 3)
+      k <- min(k, 6)
+
+      gate_filter[[cnt]] <- openCyto::gate_flowclust_2d(fr=ff[idt_downsample, ], quantile = 0.9, xChannel = chnl[1], yChannel = chnl[2], K=k, target = colMeans(ff@exprs[idt_iter, chnl]), min = apply(ff@exprs[idt_bg, chnl], 2, min))
+
+      if(length(idt_final)==0) idt_final <- flowCore::filter(ff, gate_filter[[cnt]])@subSet
+
+      idt_final <- idt_final | flowCore::filter(ff, gate_filter[[cnt]])@subSet
+
+      cnt <- cnt+1
+    }
+    idt_bg <- idt_bg & idt_cluster
+  }
+
+  p2 <- do_ggcyto(ff[idt_final, ], channel_bg, gate_bg)
+  p3 <- do_ggcyto(ff[idt_bg, ], chnl, gate_filter)
+  p4 <- do_ggcyto(ff, chnl, gate_filter)
+
+  p <- ggpubr::ggarrange(plotlist = list(p1, p2, p3, p4), nrow = 2, ncol = 2)
+  #p <- as.ggplot(p1)
+  ggsave(paste0(output.dir, "/PDF/", filename, ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
+  flowCore::write.FCS(ff[idt_final, ], filename = paste0(output.dir, "/FCS/", filename, ".fcs"))
 }
 
 #' Create ggcyto plot
 #'
 #' Create a ggcyto plot based on two given channels (or one and by default `SSC-A` will be used as the second one). The ggcyto
 #' could include gates and logicle scale.
-#' @param fC flowCore to be simplified.
+#' @param fC flowCore.
 #' @param channels channels used to be plot. Vector with two elements. In case of one element, `SSC-A` will be used as the second channel.
 #' @param gates gates to be included in the ggycyto.
 #' @param logicle_chnls channels to be transfoormed in logicle scale.
@@ -350,17 +323,23 @@ do_backgating_cluster <- function(ff, filename, output.dir, chnl = c("FSC-A", "S
 #' @export
 #' @examples
 #' do_ggcyto()
-do_ggcyto <- function(fC, channels, gates, logicle_chnls){
+
+do_ggcyto <- function(fC, channels, gates = NULL, logicle_chnls = NULL, main = NULL, legend = FALSE){
 
   if(length(logicle_chnls)>0){
-    lgcl <- logicleTransform()
-    trans <- transformList(c(logicle_chnls), lgcl)
-    fC_plot <- transform(fC, trans)
-    gates <- ggcyto::rescale_gate(gates, lgcl, logicle_chnls)
+    lgcl <- flowCore::logicleTransform()
+    trans <- flowCore::transformList(c(logicle_chnls), lgcl)
+    fC_plot <- ggcyto::transform(fC, trans)
 
-    # for(i in 1:length(gates)){
-    #   gates[[i]] <- ggcyto::rescale_gate(gates[[i]], lgcl, names(gates)[i])
-    # }
+    for(gate_idt in logicle_chnls){
+      logicle_chnls_tr <- logicle_chnls[logicle_chnls%in%names(gates[[gate_idt]]@min)]
+      gates[[gate_idt]] <- ggcyto::rescale_gate(gates[[gate_idt]], lgcl, logicle_chnls_tr)
+    }
+
+    if("join" %in% names(gates)){
+      if(any(logicle_chnls%in%names(gates[["join"]]@mean)))
+        gates[["join"]] <- ggcyto::rescale_gate(gates[["join"]], lgcl, logicle_chnls)
+    }
 
   }else{
     fC_plot <- fC
@@ -372,16 +351,121 @@ do_ggcyto <- function(fC, channels, gates, logicle_chnls){
 
   p <- ggcyto::autoplot(fC_plot, x = channels[1], y = channels[2], bins = 100)
 
-  # for(i in 1:length(gates)){
-  #   p <- p + ggcyto::geom_gate(gates[[i]])
-  # }
-
-  if(!is.null(gates))
-    p <- p + ggcyto::geom_gate(gates)
+  if(!is.null(gates)){
+    for(gate in gates){
+      p <- p + ggcyto::geom_gate(gate)
+    }
+  }
 
   p <- p + ggplot2::theme_bw()+ggplot2::theme(strip.text.x = ggplot2::element_text(size = 0, colour = "orange", angle = 90))
 
+  #Labelling
+  p <- ggcyto::as.ggplot(p)
+  labels <- fC@parameters@data$desc[match(channels, fC@parameters@data$name)]
+
+  for(i in 1:length(labels)){
+    if(labels[i]!=channels[i]){
+      labels[i] <- paste0(labels[i], " (", channels[i], ")")
+    }
+  }
+
+  labels[match(logicle_chnls, channels)] <- paste0(labels[match(logicle_chnls, channels)], " - logicleTransform")
+
+  p <- p + xlab(labels[1]) + ylab(labels[2])
+
+  if(!is.null(main))
+    p <- p+ggtitle(label = main)+ggplot2::theme(plot.title = ggplot2::element_text(size = 15, face = "bold", hjust = 0.5))
+
+  if(!legend){
+    p <- p+ggplot2::theme(legend.position = "none")
+  }
+
   return(p)
+}
+
+
+
+do_traditional <- function(filename, id = NULL, panel, batch=NULL, output.dir, info_panel, cutpoint_min=1, cutpoint_max=500000){
+
+  if(is.null(id)) id <- filename
+
+  ff.raw <- flowCore::read.FCS(filename)
+  n.total <- nrow(ff.raw)
+
+  if(!is.null(batch) & grepl("Batch", colnames(info_panel), ignore.case = T)){
+    info_panel <- info_panel[info_panel$Batch==batch, ]
+  }
+
+  info_panel <- info_panel[info_panel$Panel==panel, ]
+
+  df_traditional <- data.frame(File=filename, ID=id)
+  df_traditional$N.total <- n.total
+  df_traditional[, info_panel$Label] <- NA
+
+  plot_traditional <- list()
+
+  for(i in 1:nrow(info_panel)){
+
+    pattern_list <- info_panel$Pattern[i]
+    label <- info_panel$Label[i]
+
+    pattern_list <- unlist(strsplit(pattern_list, "[.]"))
+    pattern_list <- sapply(pattern_list, strsplit, "[;]")
+
+    plot_list <- list()
+    ff <- ff.raw
+
+    for(pattern in pattern_list){
+
+      channel_sign <- sapply(pattern, function(x) substring(x, nchar(x), nchar(x)))
+      channel <- sapply(pattern, function(x) substring(x, 1, nchar(x)-1))
+      names(channel) <- channel
+      names(channel_sign) <- names(channel)
+      all(channel_sign%in%c("+","-"))
+
+      if(all(!names(channel)%in%ff@parameters@data$desc)){
+        message("Error --> ", id)
+        return(0)
+      }
+
+      channel <- ff@parameters@data$name[match(names(channel), ff@parameters@data$desc)]
+      names(channel) <- names(channel_sign)
+      channel <- paste0(channel, channel_sign)
+      res_gate <- apply_gate(ff, channel, cutpoint_min = cutpoint_min, cutpoint_max = cutpoint_max, return_plot = F, join = F)
+
+      idt_bg <- res_gate$idt
+      gate_bg <- res_gate$gate_bg
+      channel_bg <- res_gate$channel
+
+      plot_list[[paste0(pattern, collapse = ":")]] <- do_ggcyto(ff, channel_bg, gate_bg, logicle_chnls = channel_bg, main = label)
+      ff <- ff[idt_bg, ]
+
+    }
+
+    df_traditional[, label] <- nrow(ff)
+    plot_traditional[[label]] <- plot_list[[length(plot_list)]]
+  }
+
+  nrow <- ifelse(length(plot_traditional)%%2==0, length(plot_traditional)/2, length(plot_traditional)/2+1)
+  result_plot <- ggpubr::ggarrange(plotlist = plot_traditional, ncol = 2, nrow = nrow)
+  result_filename <- paste0(output.dir, "/Traditional_counts.txt")
+
+  if(!dir.exists(paste0(output.dir, "/plots"))) dir.create(paste0(output.dir, "/plots"))
+  if(!dir.exists(paste0(output.dir, "/plots/", panel))) dir.create(paste0(output.dir, "/plots/", panel))
+  ggsave(paste0(output.dir, "/plots/", panel, "/", gsub(".fcs$", "", id), ".pdf"), plot = result_plot, device = "pdf", width = 15, height = 6*nrow)
+
+  df_traditional$Sys_Time <- Sys.time()
+
+  write.table(
+    x = df_traditional,
+    file = result_filename
+    , col.names = !file.exists(result_filename)
+    , sep = "\t"
+    , row.names = F
+    , append = file.exists(result_filename)
+    , quote = F
+  )
+
 }
 
 #' Do back-gating

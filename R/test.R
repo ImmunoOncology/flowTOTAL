@@ -39,30 +39,7 @@ do_bg_pca <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), chan
   ggsave(paste0(output.dir, "/", filename, ".pdf"), plot = p, device = "pdf", width = 18, height = 12)
 }
 
-do_double_bg_pca <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, min.count = 10000){
 
-  #bg_filter <- openCyto::gate_flowclust_1d(fr=ff, channel_bg, K=2)
-  #if(bg_filter@min<min.count) bg_filter@min <- min.count
-  chnl_filter <- openCyto::gate_flowclust_1d(fr=ff, chnl[2], K=2)
-  idt <- ff@exprs[, chnl[2]]<chnl_filter@min
-  bg_filter <- openCyto::gate_flowclust_1d(fr=ff[idt, ], channel_bg, K=2)
-  if(bg_filter@min<min.count) bg_filter@min <- min.count
-  idt <- ff@exprs[, channel_bg]>bg_filter@min & ff@exprs[, chnl[2]]<chnl_filter@min
-
-  peaks_chnl1 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[1]], num_peaks = 1)
-  peaks_chnl2 <- openCyto:::.find_peaks(ff@exprs[idt, chnl[2]], num_peaks = 1)
-
-  k <- nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[1]]))*nrow(openCyto:::.find_peaks(ff@exprs[idt, chnl[2]]))
-
-  filter <- openCyto::gate_flowclust_2d(fr=ff[idt, ], quantile = 0.99, xChannel = chnl[1], yChannel = chnl[2], K=6,target = c(peaks_chnl1$x[1], peaks_chnl2$x[1]))
-  p1 <- ggcyto::autoplot(ff, x = chnl[2], y = channel_bg, bins = 100)+geom_gate(bg_filter)+geom_gate(chnl_filter)
-  p2 <- ggcyto::autoplot(ff[idt, ], x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)+
-    xlim(range(ff@exprs[, chnl[1]]))+ylim(range(ff@exprs[, chnl[2]]))
-  p3 <- ggcyto::autoplot(ff, x = chnl[1], y = chnl[2], bins = 100)+geom_gate(filter)
-
-  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p2), as.ggplot(p3)))
-  ggsave(paste0(output.dir, "/", filename, ".pdf"), plot = p, device = "pdf", width = 18, height = 12)
-}
 
 
 log_file <- "/Volumes/ExtremeSSD/IBIMA/Citometria/Log_file_error.txt"
@@ -74,9 +51,26 @@ log_file_error <- function(messages){
   sink()
 }
 
+channel <- list()
+channel[["Panel1"]][["Civil"]] <- c("CD3+", "SSC-A-")
+channel[["Panel2"]][["Civil"]] <- c("CD4+", "SSC-A-")
+channel[["Panel3"]][["Civil"]] <- c("CD16+", "SSC-A-")
+channel[["Panel4"]][["Civil"]] <- c("CD19+", "SSC-A-")
 
-metadata_panel1 <- metadata[metadata$panel%in%"Panel2", ]
+
+channel[["Panel1"]][["Marbella"]] <- c("CD3+", "SSC-A-")
+channel[["Panel2"]][["Marbella"]] <- c("CD4+", "SSC-A-")
+channel[["Panel3"]][["Marbella"]] <- c("CD19+", "SSC-A-")
+channel[["Panel4"]][["Marbella"]] <- c("CD14+", "CD11b+")
+
+metadata_panel1 <- metadata[metadata$Location%in%"Marbella" & !is.na(metadata$panel) & metadata$panel%in%c("Panel1", "Panel2", "Panel3"), ]
+
+# set.seed(123)
+# idt <- sample(1:nrow(metadata_panel1), 100)
+# metadata_panel1 <- metadata_panel1[idt, ]
+
 rownames(metadata_panel1) <- 1:nrow(metadata_panel1)
+
 
 
 cl <- parallel::makeCluster(6, setup_strategy = "sequential")
@@ -88,16 +82,33 @@ system.time(clean <- foreach(i = 1:nrow(metadata_panel1)) %dopar% {
     library(ggcyto)
     library(ggplot2)
     library(openCyto)
+
     filename_clean <- metadata_panel1$filename_clean[i]
     ff <- flowCore::read.FCS(filename_clean)
-    channel_bg <- as.vector(ff@parameters@data$name[which(ff@parameters@data$desc=="CD4")])
-    output.dir <- "/Volumes/TRANSCEND/IBIMA/Citometria/pruebas"
+
+    panel <- metadata_panel1$panel[i]
+    location <- metadata_panel1$Location[i]
+    my_channel <- channel[[panel]][[location]]
+    channel_sign <- sapply(my_channel, function(x) substr(x, nchar(x), nchar(x)))
+    my_channel <-  sapply(my_channel, function(x) substr(x, 1, nchar(x)-1))
+    ff@parameters@data$desc[is.na(ff@parameters@data$desc)] <- ff@parameters@data$name[is.na(ff@parameters@data$desc)]
+    channel_bg <- as.vector(ff@parameters@data$name[match(my_channel, ff@parameters@data$desc)])
+    channel_bg <- paste0(channel_bg,  channel_sign)
+
+    output.dir <- paste0("/Volumes/TRANSCEND/IBIMA/Citometria/pruebas/", panel)
+    if(!dir.exists(output.dir)) dir.create(output.dir)
+    if(!dir.exists(paste0(output.dir, "/PDF"))) dir.create(paste0(output.dir, "/PDF"))
+    if(!dir.exists(paste0(output.dir, "/FCS"))) dir.create(paste0(output.dir, "/FCS"))
+
     filename <- unlist(strsplit(filename_clean, "/"))
     filename <- filename[length(filename)]
     filename <- gsub(".fcs$", "", filename)
     filename <- paste0(filename, "-", i)
-    do_bg_pca(ff, filename = filename, channel_bg = channel_bg, output.dir = output.dir)
-   },
+    cutpoint_min <- 1000 # 5000
+    chnl = c("FSC-A", "SSC-A")
+    cutpoint_max = 50000
+    do_backgating_cluster(ff, filename = filename, channel_bg = channel_bg, output.dir = output.dir, cutpoint_min = cutpoint_min)
+        },
   error=function(e) {
     log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
     return(e)
@@ -161,7 +172,6 @@ kms_iris <- ks::kms(x = ff@exprs[, c("PE-Cy7-A", "FSC-A", "SSC-A")], H = H)
 
 kdr_oval <- ks::kdr(x = samp_oval)
 
-emst <- emstreeR::ComputeMST(x = kdr_oval$end.points, verbose = FALSE)
 
 
 
@@ -181,7 +191,7 @@ for(i in 1:nrow(metadata_panel1)){
   marker_bg <- c("CD3+")
   dir_plot <- paste0(output, gsub("/Volumes/ExtremeSSD/IBIMA/Citometria/fcs_clean/", "", filename_clean))
   dir_plot <- gsub(".fcs$", ".pdf", dir_plot)
-  dummy <- do_backgating(ff, marker_bg = marker_bg, dir_plot=dir_plot)
+  dummy <- do_backgating(ff, marker_bg = marker_bg, output.dir=dir_plot)
 }
 
 
