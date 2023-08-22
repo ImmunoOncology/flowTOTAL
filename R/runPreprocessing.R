@@ -122,7 +122,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
         file <- metadata$filename[i]
         filename <- gsub("fcs_raw/", "", file)
         output <- "fcs_clean"
-        run_Preprocessing(file, filename, output, report=T)
+        doPreprocessing(file, filename, output, report=T)
       },
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
@@ -140,7 +140,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
         file <- metadata$filename[i]
         filename <- gsub("fcs_raw/", "", file)
         output <- "fcs_clean"
-        run_Preprocessing(file, filename, output, report=T)
+        doPreprocessing(file, filename, output, report=T)
       },
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
