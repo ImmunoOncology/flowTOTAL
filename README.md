@@ -8,6 +8,13 @@ flowTOTAL is a user-friendly command line workflow to analyze flow cytometry dat
 
 flowTOTAL will be available soon!!
 
+Dummy:
+
+```{R}
+
+remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
+
+```
 
 ## Version 
 
