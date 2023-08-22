@@ -11,4 +11,4 @@ flowTOTAL will be available soon!!
 
 ## Version 
 
-0.01
+0.02
