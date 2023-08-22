@@ -1,1 +1,9 @@
 .Rproj.user
+.Rhistory
+._.Rhistory
+._README.md
+R/._estimateProportion.R
+R/._helperFunctions.R
+R/._runBackgating.R
+R/._runPreprocessing.R
+

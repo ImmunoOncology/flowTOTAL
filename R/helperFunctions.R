@@ -1,5 +1,3 @@
-
-
 flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
                                  second_fractionFR = 0.1, alphaFR = 0.01, decompFR = TRUE,
                                  ChExcludeFS = c("FSC", "SSC"), outlier_binsFS = FALSE, pen_valueFS = 500,
