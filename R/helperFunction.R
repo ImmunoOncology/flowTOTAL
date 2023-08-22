@@ -5,12 +5,12 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
                                  ChExcludeFS = c("FSC", "SSC"), outlier_binsFS = FALSE, pen_valueFS = 500,
                                  max_cptFS = 3, ChExcludeFM = c("FSC", "SSC"), sideFM = "both",
                                  neg_valuesFM = 1, mini_report = "QC_report", folder_results = "resultsQC") {
-
+  
   FileType <- "FCS"
   i <- 1
   set <- as(fcsfiles, "flowSet")
   names <- flowCore::identifier(fcsfiles)
-
+  
   if (missing(timeCh) || is.null(timeCh)) {
     timeCh <- flowAI:::findTimeChannel(set[[1]])
   }
@@ -18,7 +18,7 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
     warning("Impossible to retrieve the time channel automatically. The quality control can only be performed on signal acquisition and dynamic range.",
             call. = FALSE)
   }
-
+  
   word <- which(grepl("TIMESTEP", names(flowCore::keyword(set[[1]])),
                       ignore.case = TRUE))
   timestep <- as.numeric(flowCore::keyword(set[[1]])[[word[1]]])
@@ -47,10 +47,10 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   }
   filename_ext <- flowCore::identifier(set[[i]])
   filename <- sub("^([^.]*).*", "\\1", filename_ext)
-
+  
   cat(paste0("Quality control for the file: ", filename,
              "\n"))
-
+  
   if (!is.null(timeCh)) {
     if (length(unique(flowCore::exprs(set[[i]])[, timeCh])) ==
         1) {
@@ -66,7 +66,7 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   }else {
     TimeChCheck <- "NoTime"
   }
-
+  
   FSbinSize <- min(max(1, ceiling(nrow(set[[1]])/100)),
                    500)
   if (is.null(TimeChCheck)) {
@@ -74,7 +74,7 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   }else {
     ordFCS <- set[[i]]
   }
-
+  
   origin_cellIDs <- 1:nrow(ordFCS)
   FR_bin_arg <- list(second_fraction = second_fractionFR,
                      timeCh = timeCh, timestep = timestep)
@@ -95,46 +95,35 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
     FlowRateQC$goodCellIDs <- origin_cellIDs
     FlowRateQC$res_fr_QC$badPerc <- 0
   }
-
+  
   FlowSignalData <- do.call(flowAI:::flow_signal_bin, c(ordFCS,
                                                         FS_bin_arg))
   FlowSignalQC <- do.call(flowAI:::flow_signal_check, c(ordFCS,
                                                         list(FlowSignalData), FS_QC_arg))
   FlowMarginQC <- do.call(flowAI:::flow_margin_check, c(ordFCS,
                                                         FM_QC_arg))
-
+  
   goodCellIDs <- intersect(FlowRateQC$goodCellIDs,
                            intersect(FlowSignalQC$goodCellIDs, FlowMarginQC$goodCellIDs))
   analysis <- "Flow Rate, Flow Signal and Flow Margin"
-
+  
   badCellIDs <- setdiff(origin_cellIDs, goodCellIDs)
   totalBadPerc <- round(length(badCellIDs)/length(origin_cellIDs),
                         4)
   sub_exprs <- flowCore::exprs(ordFCS)
   params <-  flowCore::parameters(ordFCS)
   keyval <-  flowCore::keyword(ordFCS)
-
-
+  
+  
   goodfcs <- flowCore::flowFrame(exprs = sub_exprs[goodCellIDs, ], parameters = params, description = keyval)
-
-
-  minireport <- paste0(folder_results, mini_report,
-                         ".txt")
-  if (!file.exists(minireport)) {
-    write.table(t(c("Name file", "n. of events pre-filter", "n. of events post-filter",
-                    "% anomalies", "analysis from", "% anomalies flow Rate",
-                    "% anomalies Signal", "% anomalies Margins")),
-                minireport, sep = "\t", row.names = FALSE,
-                quote = FALSE, col.names = FALSE)
-  }
-
+  
   n_total <- as.integer(dim(set[[i]])[1])
   df_minireport <- data.frame(File=filename, N.initial.events=n_total,
-                       FlowRateQC=n_total-length(FlowRateQC$goodCellIDs),
-                       FlowSignalQC=n_total-length(FlowSignalQC$goodCellIDs),
-                       FlowMarginQC=n_total-length(FlowMarginQC$goodCellIDs))
-
+                              FlowRateQC=n_total-length(FlowRateQC$goodCellIDs),
+                              FlowSignalQC=n_total-length(FlowSignalQC$goodCellIDs),
+                              FlowMarginQC=n_total-length(FlowMarginQC$goodCellIDs))
+  
   return(list(FCS=goodfcs, minireport=df_minireport))
-
+  
 }
 
