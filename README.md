@@ -7,3 +7,8 @@ flowTOTAL is a user-friendly command line workflow to analyze flow cytometry dat
 ## Installation
 
 flowTOTAL will be available soon!!
+
+
+## Version 
+
+0.01
