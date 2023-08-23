@@ -190,11 +190,13 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
       ref <- 1
     }
     
-    gate_chnl[[j]] <- openCyto::gate_tail(ff[keep, ], panel_channel[j], adjust = 0.5, ref_peak = ref, auto_tol=T, num_peaks = nrow(n_peaks))
+    #gate_chnl[[j]] <- openCyto::gate_tail(ff[keep, ], panel_channel[j], adjust = 0.5, ref_peak = ref, auto_tol=T, num_peaks = nrow(n_peaks))
+    gate_chnl[[j]] <- gate_tail_custom(ff[keep, ], panel_channel[j], adjust = 0.5, ref_peak = ref, auto_tol=T, num_peaks = nrow(n_peaks))
     
     if(nrow(n_peaks)==1){
       n_peaks <- openCyto:::.find_peaks(ff@exprs[, panel_channel[j]], adjust = 1)
-      gate_chnl[[j]] <- openCyto::gate_tail(ff, panel_channel[j], adjust = 1, ref_peak = 1, auto_tol=T, num_peaks = nrow(n_peaks))
+      #gate_chnl[[j]] <- openCyto::gate_tail(ff, panel_channel[j], adjust = 1, ref_peak = 1, auto_tol=T, num_peaks = nrow(n_peaks))
+      gate_chnl[[j]] <- gate_tail_custom(ff, panel_channel[j], adjust = 1, ref_peak = 1, auto_tol=T, num_peaks = nrow(n_peaks))
       
     }
     
@@ -203,10 +205,10 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   
   ff_subset <- ff[keep, ]
   
-  p1 <- autoplot(ff, "FSC-A", "SSC-A", bins=100)
-  p_gate <- autoplot(ff, panel_channel[1], panel_channel[2], bins=100)
+  p1 <- ggcyto::autoplot(ff, "FSC-A", "SSC-A", bins=100)
+  p_gate <- ggcyto::autoplot(ff, panel_channel[1], panel_channel[2], bins=100)
   for(gate in gate_chnl){
-    p_gate <- p_gate+geom_gate(gate)
+    p_gate <- p_gate+ggcyto::geom_gate(gate)
   }
   
   ff@exprs <- rbind(ff@exprs, ff_subset@exprs)
@@ -214,7 +216,7 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   contour.pct <- get_contour(ff)
   
   my_gates <- list()
-  p2 <- autoplot(ff.raw, "FSC-A", "SSC-A", bins=100)
+  p2 <- ggcyto::autoplot(ff.raw, "FSC-A", "SSC-A", bins=100)
   
   gate_keep <- list()
   big.cells <- list()
@@ -231,14 +233,14 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
     for(j in 1:nrow(K)){
       
       gate_j <- tryCatch({
-        openCyto::gate_flowclust_2d(ff[inner==1, ], yChannel = "SSC-A", xChannel = "FSC-A", K=nrow(K), target = c(K$x[j], median(ff@exprs[inner==1, "SSC-A"])))
+        suppressMessages(openCyto::gate_flowclust_2d(ff[inner==1, ], yChannel = "SSC-A", xChannel = "FSC-A", K=nrow(K), target = c(K$x[j], median(ff@exprs[inner==1, "SSC-A"]))))
       }, error=function(x){
         return(NA)
       })
       
       if(!is.na(gate_j)){
         my_gates[[pct_it_cnt]] <- gate_j
-        p2 <- p2+geom_gate(my_gates[[pct_it_cnt]])
+        p2 <- p2+ggcyto::geom_gate(my_gates[[pct_it_cnt]])
         
         keep <- flowCore::filter(ff.raw, my_gates[[pct_it_cnt]])@subSet
         big.cells[[pct_it_cnt]] <- mean(ff.raw@exprs[keep, c("SSC-A")])
@@ -297,30 +299,31 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   
   idt_final <- rep(FALSE, nrow(ff.raw))
   for(pct_it_gate in pct_it){
-    p2 <- p2+geom_gate(my_gates[[pct_it_gate]], col="blue")
+    p2 <- p2+ggcyto::geom_gate(my_gates[[pct_it_gate]], col="blue")
     idt_final <- idt_final | flowCore::filter(ff.raw, my_gates[[pct_it_gate]])@subSet
   }
   
   # saveRDS(as.ggplot(p2), paste0(output.dir, "/PDF/", gsub(".fcs", "", my_sample, fixed = T), ".RDS"))
   
   
-  p_final <- autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins=100)
-  p <- ggpubr::ggarrange(plotlist = list(as.ggplot(p1), as.ggplot(p_gate), as.ggplot(p2), as.ggplot(p_final)), nrow = 2, ncol = 2)
+  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins=100)
+  p <- ggpubr::ggarrange(plotlist = list(ggcyto::as.ggplot(p1), ggcyto::as.ggplot(p_gate), ggcyto::as.ggplot(p2), ggcyto::as.ggplot(p_final)), nrow = 2, ncol = 2)
   
-  ggsave(paste0(output.dir, "/PDF/", gsub(".fcs", "", filename, fixed = T), ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
+  ggplot2::ggsave(paste0(output.dir, "/PDF/", gsub(".fcs", "", filename, fixed = T), ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
   flowCore::write.FCS(ff.raw[idt_final, ], filename = paste0(output.dir, "/FCS/", filename))
   
   return(sum(idt_final))
 }
 
 
-runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "SSC-A"), channel_bg, logicle_chnls=NULL, sd.max_it=0.75, 
+runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), channel_bg, logicle_chnls=NULL, sd.max_it=0.75, 
                                 min.pct_it=0.01, target.fsc=50000, target.ssc=17500, min.ff_subset=250, 
                                 log_file="Log_file_error.txt", log_file_traditional="Log_file_error_traditional.txt", track_file="Log_file_track.txt", ncores=NULL){
   
-  if(!dir.exists(output)) dir.create(output)
+  output.dir <- paste0(output, "/Backgating")
+  if(!dir.exists(output.dir)) dir.create(output.dir)
   
-  log_file <- paste0(output, log_file)
+  log_file <- paste0(output, "/", log_file)
   log_file_error <- function(messages){
     sink(log_file, append = T)
     for(i in messages){
@@ -330,7 +333,7 @@ runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "
   }
   
   
-  log_file_traditional <- paste0(output, log_file_traditional)
+  log_file_traditional <- paste0(output, "/", log_file_traditional)
   log_file_error_traditional <- function(messages){
     sink(log_file_traditional, append = T)
     for(i in messages){
@@ -339,7 +342,7 @@ runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "
     sink()
   }
   
-  track_file <- paste0(output, track_file)
+  track_file <- paste0(output, "/", track_file)
   log_file_track <- function(messages){
     sink(track_file, append = T)
     for(i in messages){
@@ -349,8 +352,6 @@ runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "
   }
   
 
-  output.dir <- unique(paste0(output, metadata$Panel))
-  if(!dir.exists(output.dir)) dir.create(output.dir)
   if(!dir.exists(paste0(output.dir, "/PDF"))) dir.create(paste0(output.dir, "/PDF"))
   if(!dir.exists(paste0(output.dir, "/FCS"))) dir.create(paste0(output.dir, "/FCS"))
   
@@ -363,17 +364,14 @@ runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "
     foreach(i = 1:nrow(metadata)) %dopar% {
       
       filename_clean <- metadata$filename_clean[i]
-      panel <- metadata$Panel[i]
       filename <- unlist(lapply(strsplit(filename_clean, "/"), function(x) x[length(x)]))
-      
-      output.dir <- unique(paste0(panel, metadata$Panel))
       
       tryCatch({
         
         ff <- flowCore::read.FCS(filename_clean)
         res_bg <- doDensityBackgating(ff, filename = filename, output.dir = output.dir, channel_bg = channel_bg, logicle_chnls = logicle_chnls
                                         , sd.max_it=sd.max_it, min.pct_it=min.pct_it, target.fsc=target.fsc, target.ssc=target.ssc, min.ff_subset=min.ff_subset)
-        log_file_track(paste(filename_clean, filename, paste0(output.dir, "/FCS/", filename), panel, nrow(ff@exprs), res_bg, "Completed", i, sep = "\t"))
+        log_file_track(paste(filename_clean, filename, paste0(output.dir, "/FCS/", filename), nrow(ff@exprs), res_bg, "Completed", i, sep = "\t"))
         
       },
       error=function(e) {
@@ -385,17 +383,14 @@ runDensityBackgating <- function(metadata, output="Results", chnl = c("FSC-A", "
   }else{
     for(i in 1:nrow(metadata)){
       filename_clean <- metadata$filename_clean[i]
-      panel <- metadata$Panel[i]
       filename <- unlist(lapply(strsplit(filename_clean, "/"), function(x) x[length(x)]))
-      
-      output.dir <- unique(paste0(panel, metadata$Panel))
       
       tryCatch({
         
         ff <- flowCore::read.FCS(filename_clean)
         res_bg <- doDensityBackgating(ff, filename = filename, output.dir = output.dir, channel_bg = channel_bg, logicle_chnls = logicle_chnls
                                       , sd.max_it=sd.max_it, min.pct_it=min.pct_it, target.fsc=target.fsc, target.ssc=target.ssc, min.ff_subset=min.ff_subset)
-        log_file_track(paste(filename_clean, filename, paste0(output.dir, "/FCS/", filename), panel, nrow(ff@exprs), res_bg, "Completed", i, sep = "\t"))
+        log_file_track(paste(filename_clean, filename, paste0(output.dir, "/FCS/", filename), nrow(ff@exprs), res_bg, "Completed", i, sep = "\t"))
         
       },
       error=function(e) {

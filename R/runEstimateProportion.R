@@ -61,10 +61,10 @@ do_ggcyto <- function(fC, channels, gates = NULL, logicle_chnls = NULL, main = N
   
   labels[match(logicle_chnls, channels)] <- paste0(labels[match(logicle_chnls, channels)], " - logicleTransform")
   
-  p <- p + xlab(labels[1]) + ylab(labels[2])
+  p <- p + ggplot2::xlab(labels[1]) + ggplot2::ylab(labels[2])
   
   if(!is.null(main))
-    p <- p+ggtitle(label = main)+ggplot2::theme(plot.title = ggplot2::element_text(size = 15, face = "bold", hjust = 0.5))
+    p <- p+ggplot2::ggtitle(label = main)+ggplot2::theme(plot.title = ggplot2::element_text(size = 15, face = "bold", hjust = 0.5))
   
   if(!legend){
     p <- p+ggplot2::theme(legend.position = "none")
@@ -167,13 +167,13 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
       if(k==1 & first){
         
         k <- nrow(openCyto:::.find_peaks(ff@exprs[idt, channel[i]], adjust = 1))
-        gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = ifelse(k>1, 2, 1))
+        gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = ifelse(k>1, 2, 1))
         
         if(traditional){
           k_peak <- openCyto:::.find_peaks(ff@exprs[idt, channel[i]], adjust = 1)
           k <- nrow(k_peak)
           if(k==1){
-            gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = k)
+            gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = k)
           }else{
             gate <- openCyto::gate_mindensity(fr=ff[idt, ], channel[i], cutpoint_min=cutpoint_min, cutpoint_max = cutpoint_max, min.count = 100, adjust = 1)
             #gate <- openCyto::gate_mindensity(fr=ff[idt, ], channel[i], cutpoint_min=cutpoint_min, cutpoint_max = cutpoint_max, min.count = 100, adjust = 0.9)
@@ -185,9 +185,9 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
         
       }else if(k>2){
         
-        gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = ifelse(channel_sign[i]=="[-", k-1, k), side = ifelse(channel_sign[i]=="[-", "right", "left"))
+        gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = ifelse(channel_sign[i]=="[-", k-1, k), side = ifelse(channel_sign[i]=="[-", "right", "left"))
         if(traditional){
-          gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = k)
+          gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], num_peaks = k, ref_peak = k)
         }
         
         gate@min <- ifelse(gate@min<cutpoint_min, cutpoint_min, gate@min)
@@ -204,11 +204,11 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
         k_peak <- k_peak[order(k_peak$x, decreasing = F), ]
         rownames(k_peak) <- 1:nrow(k_peak)
         max_peak <- which.max(k_peak$y)
-        gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], side = "left", ref_peak = max_peak, num_peaks = nrow(k_peak), adjust = 0.5)
+        gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], side = "left", ref_peak = max_peak, num_peaks = nrow(k_peak), adjust = 0.5)
       }
       
       if(ending[i]){
-        gate <- openCyto::gate_tail(fr = ff[idt, ], channel = channel[i], side = "right")
+        gate <- gate_tail_custom(fr = ff[idt, ], channel = channel[i], side = "right")
       }
       
       events_bg <-  do.call(channel_sign[i], args = list(ff@exprs[, names(gate@min)], gate@min))
@@ -274,20 +274,14 @@ apply_gate <- function(ff, channel, cutpoint_min, cutpoint_max, return_plot = TR
   return(result)
 }
 
-estimateProportion <- function(filename, id = NULL, panel, batch=NULL, output.dir, info_panel, cutpoint_min=1, cutpoint_max=500000){
+doEstimateProportion <- function(filename, id = NULL, output.dir, info_panel, cutpoint_min=1, cutpoint_max=500000){
   
   if(is.null(id)) id <- filename
-  if(!dir.exists(paste0(output.dir, "/", panel))) dir.create(paste0(output.dir, "/", panel))
-  
+
   ff.raw <- flowCore::read.FCS(filename)
   n.total <- nrow(ff.raw)
   
-  if(!is.null(batch) & grepl("Batch", colnames(info_panel), ignore.case = T)){
-    info_panel <- info_panel[info_panel$Batch==batch, ]
-  }
-  
-  info_panel <- info_panel[info_panel$Panel==panel, ]
-  
+
   df_traditional <- data.frame(File=filename, ID=id)
   df_traditional$N.total <- n.total
   df_traditional[, info_panel$Label] <- NA
@@ -345,18 +339,17 @@ estimateProportion <- function(filename, id = NULL, panel, batch=NULL, output.di
     df_traditional[, label] <- nrow(ff)
     plot_traditional[[label]] <- plot_list[[length(plot_list)]]
     
-    if(!dir.exists(paste0(output.dir, "/", panel, "/", label))) dir.create(paste0(output.dir, "/", panel,  "/", label))
-    flowCore::write.FCS(ff, filename = paste0(output.dir, "/", panel,  "/", label, "/", id, ".fcs"))
+    if(!dir.exists(paste0(output.dir, "/", label))) dir.create(paste0(output.dir,  "/", label))
+    flowCore::write.FCS(ff, filename = paste0(output.dir,  "/", label, "/", id, ".fcs"))
     
   }
   
   nrow <- ifelse(length(plot_traditional)%%2==0, length(plot_traditional)/2, length(plot_traditional)/2+1)
   result_plot <- ggpubr::ggarrange(plotlist = plot_traditional, ncol = 2, nrow = nrow)
-  result_filename <- paste0(output.dir, "/Traditional_counts_", panel, ".txt")
+  result_filename <- paste0(output.dir, "/Traditional_counts.txt")
   
   if(!dir.exists(paste0(output.dir, "/plots"))) dir.create(paste0(output.dir, "/plots"))
-  if(!dir.exists(paste0(output.dir, "/plots/", panel))) dir.create(paste0(output.dir, "/plots/", panel))
-  ggsave(paste0(output.dir, "/plots/", panel, "/", gsub(".fcs$", "", id), ".pdf"), plot = result_plot, device = "pdf", width = 15, height = 6*nrow)
+  ggplot2::ggsave(paste0(output.dir, "/plots/", gsub(".fcs$", "", id), ".pdf"), plot = result_plot, device = "pdf", width = 15, height = 6*nrow)
   
   df_traditional$Sys_Time <- Sys.time()
   
@@ -369,5 +362,53 @@ estimateProportion <- function(filename, id = NULL, panel, batch=NULL, output.di
     , append = file.exists(result_filename)
     , quote = F
   )
+  
+}
+
+runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NULL){
+
+  counts <- read.delim(log_file_track, header = F)
+  files <- counts[counts$V6%in%"Completed", ]
+  files <- files$V3
+  
+  output.dir <- paste0(output, "/Results")
+  if(!dir.exists(output.dir)) dir.create(output.dir)
+  
+  log_file_traditional <- paste0(output, "/", "Log_file_error_estimate_proportion.txt")
+  log_file_error_traditional <- function(messages){
+    sink(log_file_traditional, append = T)
+    for(i in messages){
+      cat(i, "\n")
+    }
+    sink()
+  }
+  
+  if(!is.null(ncores)){
+    
+    cl <- parallel::makeCluster(ncores)
+    doParallel::registerDoParallel(cl)
+    
+    foreach(i = 1:length(files)) %dopar% {
+      tryCatch({
+        id <- gsub(".fcs$", "", unlist(strsplit(files[i], "/"))[[length(unlist(strsplit(files[i], "/")))]])
+        doEstimateProportion(filename = files[i], id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+      },
+      error=function(e) {
+        log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
+        return(e)
+      })
+    }
+  }else{
+    for(i in 1:length(files)){
+      tryCatch({
+        id <- gsub(".fcs$", "", unlist(strsplit(files[i], "/"))[[length(unlist(strsplit(files[i], "/")))]])
+        doEstimateProportion(filename = files[i], id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+      },
+      error=function(e) {
+        log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
+        return(e)
+      })
+    }
+  }
   
 }

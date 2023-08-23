@@ -49,6 +49,9 @@ doPreprocessing <- function(file, filename, output, report=T){
     ff_comp <- ff
   }
   
+  cat(paste0("Quality control for the file: ", filename,
+             "\n"))
+  
   res_QC <- tryCatch({
     flow_auto_qc_custom(ff_comp, filename = filename, ChExcludeFS = NULL, ChExcludeFM=NULL, mini_report="Preprocessing", folder_results=paste0(output, "/resultsQC"))
   }, error=function(x){
@@ -61,7 +64,7 @@ doPreprocessing <- function(file, filename, output, report=T){
   ff_QC <- res_QC$FCS
   chnl <-  c("FSC-A", "FSC-H")[c("FSC-A", "FSC-H")%in%ff_QC@parameters@data$name]
   if(length(chnl)==2){
-    ff_singlet <- filter_singlets(ff_QC, chnl = chnl)
+    ff_singlet <- filterSinglets(ff_QC, chnl = chnl)
   }else{
     ff_singlet <- ff_QC
   }
@@ -113,6 +116,8 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
     sink()
   }
   
+  output <- paste0(output, "/fcs_clean")
+  
   if(!all(colnames(metadata)%in%c("filename")))
     stop("Error in metadata")
   
@@ -120,8 +125,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
     for(i in 1:nrow(metadata)){
       tryCatch({
         file <- metadata$filename[i]
-        filename <- gsub("fcs_raw/", "", file)
-        output <- "fcs_clean"
+        filename <- sapply(strsplit(file, "/"), function(x) x[length(x)])
         doPreprocessing(file, filename, output, report=T)
       },
       error=function(e) {
@@ -131,7 +135,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
     }
   }else{
     
-    cl <- parallel::makeCluster(ncores)
+    cl <- parallel::makeCluster(ncores, setup_strategy = "sequential")
     doParallel::registerDoParallel(cl)
     library(doParallel)
     
@@ -139,7 +143,6 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
       tryCatch({
         file <- metadata$filename[i]
         filename <- gsub("fcs_raw/", "", file)
-        output <- "fcs_clean"
         doPreprocessing(file, filename, output, report=T)
       },
       error=function(e) {
