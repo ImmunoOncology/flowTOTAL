@@ -80,7 +80,7 @@ doPreprocessing <- function(file, filename, output, report=T){
   }
   
   
-  ff <- flowCore::read.FCS(new.file)
+  ff <- flowCore::read.FCS(file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   if("SPILL"%in%names(ff@description)){
     ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
