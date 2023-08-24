@@ -143,6 +143,8 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
     library(doParallel)
     
     foreach(i = 1:nrow(metadata)) %dopar% {
+      library(flowCore)
+      
       tryCatch({
         file <- metadata$filename[i]
         filename <- gsub("fcs_raw/", "", file)

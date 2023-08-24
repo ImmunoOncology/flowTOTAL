@@ -362,6 +362,7 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
     library(doParallel)
     
     foreach(i = 1:nrow(metadata)) %dopar% {
+      library(flowCore)
       
       filename_clean <- metadata$filename_clean[i]
       filename <- unlist(lapply(strsplit(filename_clean, "/"), function(x) x[length(x)]))

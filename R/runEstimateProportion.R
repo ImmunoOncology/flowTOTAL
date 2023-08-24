@@ -389,6 +389,8 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
     doParallel::registerDoParallel(cl)
     
     foreach(i = 1:length(files)) %dopar% {
+      library(flowCore)
+      
       tryCatch({
         id <- gsub(".fcs$", "", unlist(strsplit(files[i], "/"))[[length(unlist(strsplit(files[i], "/")))]])
         doEstimateProportion(filename = files[i], id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)

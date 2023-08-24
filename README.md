@@ -15,11 +15,15 @@ Dummy:
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-BiocManager::install("flowCore")
-BiocManager::install("ggcyto")
-BiocManager::install("openCyto")
-BiocManager::install("flowAI")
-BiocManager::install("PeacoQC")
+devtools::install_github("RGLab/RProtoBufLib")
+devtools::install_github("RGLab/cytolib")
+devtools::install_github("RGLab/flowCore")
+devtools::install_github("RGLab/flowWorkspace")
+devtools::install_github("RGLab/ggcyto")
+devtools::install_github("RGLab/openCyto")
+devtools::install_github("RGLab/flowStats")
+devtools::install_github("giannimonaco/flowAI")
+devtools::install_github("saeyslab/PeacoQC")
 
 remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
 
