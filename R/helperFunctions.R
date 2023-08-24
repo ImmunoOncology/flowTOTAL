@@ -1,5 +1,3 @@
-
-
 flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
                                  second_fractionFR = 0.1, alphaFR = 0.01, decompFR = TRUE,
                                  ChExcludeFS = c("FSC", "SSC"), outlier_binsFS = FALSE, pen_valueFS = 500,
@@ -47,9 +45,6 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   }
   filename_ext <- flowCore::identifier(set[[i]])
   filename <- sub("^([^.]*).*", "\\1", filename_ext)
-  
-  cat(paste0("Quality control for the file: ", filename,
-             "\n"))
   
   if (!is.null(timeCh)) {
     if (length(unique(flowCore::exprs(set[[i]])[, timeCh])) ==
@@ -126,4 +121,116 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   return(list(FCS=goodfcs, minireport=df_minireport))
   
 }
+
+gate_tail_custom <- function(fr, channel, filterId = "", num_peaks = 1,
+                      ref_peak = 1, strict = TRUE, tol = 1e-2, side = "right", min = NULL, max = NULL, bias = 0, positive = TRUE, ...) {
+  
+  side <- match.arg(side, c("right", "left"))
+  if (!(is.null(min) && is.null(max))) {
+    fr <- openCyto:::.truncate_flowframe(fr, channels = channel, min = min,
+                              max = max)
+  }
+  # cutpoint is calculated using the first derivative of the kernel density
+  # estimate. 
+  x <- as.vector(fr@exprs[, channel])
+  cutpoint <- cytokine_cutpoint(x = x, num_peaks = num_peaks,
+                                 ref_peak = ref_peak, tol = tol, side = side, strict = strict, ...)
+  
+  cutpoint <- cutpoint + bias
+  if(positive){
+    gate_coordinates <- list(c(cutpoint, Inf))
+  }else{
+    gate_coordinates <- list(c(-Inf, cutpoint))
+  }
+  names(gate_coordinates) <- channel
+  flowCore::rectangleGate(gate_coordinates, filterId = filterId)
+  
+}
+
+cytokine_cutpoint <- function(x, num_peaks = 1, ref_peak = 1,
+                               method = c("first_deriv", "second_deriv"),
+                               tol = 1e-2, adjust = 1, side = "right", strict = TRUE, plot = FALSE, auto_tol = FALSE, ...) {
+  
+  method <- match.arg(method)
+  peaks <- sort(openCyto:::.find_peaks(x, num_peaks = num_peaks, adjust = adjust, plot = plot)[, "x"])
+  
+  #update peak count since it can be less than num_peaks
+  num_peaks <- length(peaks)
+  
+  if (ref_peak > num_peaks) {
+    outFunc <- ifelse(strict, stop, warning)
+    outFunc("The reference peak is larger than the number of peaks found.",
+            "Setting the reference peak to 'num_peaks'...",
+            call. = FALSE)
+    ref_peak <- num_peaks
+  }
+  
+  # TODO: Double-check that a cutpoint minimum found via 'first_deriv'
+  # passes the second-derivative test.
+  
+  if (method == "first_deriv") {
+    # Finds the deepest valleys from the kernel density and sorts them.
+    # The number of valleys identified is determined by 'num_peaks'
+    deriv_out <- deriv_density(x = x, adjust = adjust, deriv = 1, ...)
+    if(auto_tol){
+      #Try to set the tolerance automatigically.
+      tol = 0.01*max(abs(deriv_out$y))
+    }
+    if (side == "right") {
+      
+      deriv_valleys <- with(deriv_out, openCyto:::.find_valleys(x = x, y = y, adjust = adjust))
+      deriv_valleys <- deriv_valleys[deriv_valleys > peaks[ref_peak]]
+      deriv_valleys <- sort(deriv_valleys)[1]
+      cutpoint <- with(deriv_out, x[x > deriv_valleys & abs(y) < tol])
+      cutpoint <- cutpoint[1]
+      
+    } else if (side == "left") {
+      
+      deriv_out$y <- -deriv_out$y
+      deriv_valleys <- with(deriv_out, openCyto:::.find_valleys(x = x, y = y, adjust = adjust))
+      deriv_valleys <- deriv_valleys[deriv_valleys < peaks[ref_peak]]
+      deriv_valleys <- sort(deriv_valleys, decreasing=TRUE)[1]
+      cutpoint <- with(deriv_out, x[x < deriv_valleys & abs(y) < tol])
+      cutpoint <- cutpoint[ length(cutpoint) ]
+      
+    } else {
+      stop("Unrecognized 'side' argument (was '", side, "'.")
+    }
+    
+  } else {
+    # The cutpoint is selected as the first peak from the second derivative
+    # density which is to the right of the reference peak.
+    deriv_out <- deriv_density(x = x, adjust = adjust, deriv = 2, ...)
+    
+    if (side == "right") {
+      deriv_peaks <- with(deriv_out, openCyto:::.find_peaks(x, y, adjust = adjust)[, "x"])
+      deriv_peaks <- deriv_peaks[deriv_peaks > peaks[ref_peak]]
+      cutpoint <- sort(deriv_peaks)[1]
+    } else if (side == "left") {
+      deriv_out$y <- -deriv_out$y
+      deriv_peaks <- with(deriv_out, openCyto:::.find_peaks(x, y, adjust = adjust)[, "x"])
+      deriv_peaks <- deriv_peaks[deriv_peaks < peaks[ref_peak]]
+      cutpoint <- sort(deriv_peaks, decreasing=TRUE)[length(deriv_peaks)]
+    } else {
+      stop("Unrecognized 'side' argument (was '", side, "'.")
+    }
+    
+  }
+  
+  cutpoint
+}
+
+deriv_density <- function(x, deriv = 1, bandwidth = NULL, adjust = 1,
+                           num_points = 10000, ...) {
+  
+  
+  if (is.null(bandwidth)) {
+    bandwidth <- ks::hpi(x, deriv.order = deriv)
+  }
+  #we use the private version of drvkde in flowStats (copied from feature package) to avoid the tcltk dependency
+  deriv_x <- flowStats:::drvkde(x = x, drv = deriv, bandwidth = adjust * bandwidth,
+                                gridsize = num_points, ...)
+  list(x = deriv_x$x.grid[[1]], y = deriv_x$est)
+}
+
 

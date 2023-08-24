@@ -1,3 +1,6 @@
+[![Github All Releases](https://img.shields.io/github/downloads/ImmunoOncology/flowTOTAL/total.svg)]()
+
+
 # flowTOTAL: flow cyTometry auTOmaTic AnaLysis <a href='https://github.com/ImmunoOncology/flowTOTAL'><img src='man/figures/logo.png' align="right" height="139" /></a>
 
 ## Overview
@@ -8,6 +11,26 @@ flowTOTAL is a user-friendly command line workflow to analyze flow cytometry dat
 
 flowTOTAL will be available soon!!
 
+Dummy:
+
+```{R}
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+devtools::install_github("RGLab/RProtoBufLib")
+devtools::install_github("RGLab/cytolib")
+devtools::install_github("RGLab/flowCore")
+devtools::install_github("RGLab/flowWorkspace")
+devtools::install_github("RGLab/ggcyto")
+devtools::install_github("RGLab/openCyto")
+devtools::install_github("RGLab/flowStats")
+devtools::install_github("giannimonaco/flowAI")
+devtools::install_github("saeyslab/PeacoQC")
+
+remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
+
+```
 
 ## Version 
 
