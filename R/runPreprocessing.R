@@ -27,10 +27,7 @@ filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
 #' @export
 #' @examples
 #' simplify_flowCore()
-simplify_flowCore <- function(filename, file, output, keep = NULL){
-  
-  if(!dir.exists(output)) dir.create(output)
-  new.file <- paste0(output, "/", file)
+simplify_flowCore <- function(filename, keep = NULL){
   
   fC <- flowCore::read.FCS(filename)
   parameters_name <- names(fC@parameters@data$name)
@@ -46,15 +43,15 @@ simplify_flowCore <- function(filename, file, output, keep = NULL){
   if(!is.null(keep)){
     if(all(keep%in%fC@parameters@data$name)){
       fC <- fC[, fC@parameters@data$name %in% keep]
-      flowCore::write.FCS(fC, new.file)
+      flowCore::write.FCS(fC, filename)
     }else{
       return(FALSE)
     }
   }else{
-    flowCore::write.FCS(fC, new.file)
+    flowCore::write.FCS(fC, filename)
   }
   
-  return(new.file)
+  return(filename)
 }
 
 
@@ -82,7 +79,6 @@ doPreprocessing <- function(file, filename, output, report=T){
     filename <- paste0(filename, ".fcs")
   }
   
-  new.file <- simplify_flowCore(file, filename, gsub("fcs_clean", "fcs_raw", output))
   
   ff <- flowCore::read.FCS(new.file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
@@ -117,6 +113,7 @@ doPreprocessing <- function(file, filename, output, report=T){
   res_QC$minireport$File <- file
   
   flowCore::write.FCS(ff_singlet, filename = paste0(output, "/", filename))
+  simplify_flowCore(paste0(output, "/", filename))
   
   if(report){
     reporte_filename <- paste0(output, "/resultsQC/Preprocessing.txt")
