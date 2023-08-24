@@ -12,6 +12,15 @@ Dummy:
 
 ```{R}
 
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("flowCore")
+BiocManager::install("ggcyto")
+BiocManager::install("openCyto")
+BiocManager::install("flowAI")
+BiocManager::install("PeacoQC")
+
 remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
 
 ```
