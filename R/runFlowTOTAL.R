@@ -7,7 +7,7 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating=NULL, panel_estimate
   metadata$filename_clean <- paste0(output, "/fcs_clean/", metadata$file)
   
   message("Step1: runPreprocessing()")
-  runPreprocessing(metadata, output = output, report = T, ncores = NULL)
+  runPreprocessing(metadata=metadata, output = output, report = T, ncores = NULL)
   
   message("Step2: runDensityBackgating()")
   runDensityBackgating(metadata = metadata, output = output, channel_bg = panel_backgating)

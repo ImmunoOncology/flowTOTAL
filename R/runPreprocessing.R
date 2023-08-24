@@ -118,7 +118,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
   
   output <- paste0(output, "/fcs_clean")
   
-  if(!all(colnames(metadata)%in%c("filename")))
+  if(!c("filename")%in%colnames(metadata))
     stop("Error in metadata")
   
   if(is.null(ncores)){
