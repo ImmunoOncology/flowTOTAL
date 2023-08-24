@@ -142,7 +142,7 @@ runPreprocessing <- function(metadata, output, report=T, cluster=NULL, log_file=
       
       tryCatch({
         file <- metadata$filename[i]
-        filename <- gsub("fcs_raw/", "", file)
+        filename <- sapply(strsplit(file, "/"), function(x) x[length(x)])
         doPreprocessing(file, filename, output, report=T)
       },
       error=function(e) {
