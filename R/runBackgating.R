@@ -378,9 +378,11 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
         log_file_track(paste(filename_clean, filename, "\t", NA, NA, "Error", i, sep = "\t"))
-        return(e)
       })
     }
+    
+    parallel::stopCluster(cl)
+    
   }else{
     for(i in 1:nrow(metadata)){
       filename_clean <- metadata$filename_clean[i]
@@ -397,7 +399,6 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
         log_file_track(paste(filename_clean, filename, "\t", NA, NA, "Error", i, sep = "\t"))
-        return(e)
       })
     }
   }

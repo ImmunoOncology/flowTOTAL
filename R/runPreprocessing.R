@@ -133,7 +133,6 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
       },
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
-        return(e)
       })
     }
   }else{
@@ -152,7 +151,6 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
       },
       error=function(e) {
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
-        return(e)
       })
     }
     parallel::stopCluster(cl)

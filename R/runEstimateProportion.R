@@ -391,13 +391,16 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
     foreach(i = 1:length(files)) %dopar% {
       library(flowCore)
       
-      tryCatch({
+      res_doEstimateProportion <- tryCatch({
         id <- gsub(".fcs$", "", unlist(strsplit(files[i], "/"))[[length(unlist(strsplit(files[i], "/")))]])
         doEstimateProportion(filename = files[i], id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
       },
       error=function(e) {
         log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
       })
+      
+      parallel::stopCluster(cl)
+      
     }
   }else{
     for(i in 1:length(files)){
@@ -407,9 +410,10 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
       },
       error=function(e) {
         log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
-        return(e)
       })
     }
   }
+  
+  return()
   
 }
