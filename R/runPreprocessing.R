@@ -4,11 +4,13 @@
 #' @param fC flowCore with the preprocess FCS data.
 #' @param chnl channels used to identify singlets. Default  `FSC-A` and `FSC-H`.
 #' @keywords singlets
+#' @import flowCore
 #' @export
 #' @examples
 #' filterSinglets()
 filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
   fC_PeacoQC <- PeacoQC::RemoveDoublets(fC, channel1 = chnl[1], channel2 = chnl[2])
+  library(flowCore)
   gate_singlet <- openCyto:::.singletGate(fC_PeacoQC, channels = chnl)
   idt_singlet <- flowCore::filter(fC_PeacoQC, gate_singlet)@subSet
   fC_singlet <- fC_PeacoQC
