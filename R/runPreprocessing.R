@@ -18,6 +18,42 @@ filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
   return(fC_singlet)
 }
 
+#' Simplify flowCore object
+#'
+#' Remove empty channels
+#' @param fC flowCore to be simplified.
+#' @param shape_channel channels used to identify shape. Default  `FSC-A`, `FSC-H`, `SSC-A` and `SSC-H`.
+#' @keywords flowCore
+#' @export
+#' @examples
+#' simplify_flowCore()
+simplify_flowCore <- function(filename, keep = NULL){
+  
+  fC <- flowCore::read.FCS(filename)
+  parameters_name <- names(fC@parameters@data$name)
+  parameters_desc <- names(fC@parameters@data$desc)
+  idt <- unique(c(grep("[FS]SC-", fC@parameters@data$name), grep("Time", fC@parameters@data$name), which(is.na(fC@parameters@data$desc))))
+  
+  fC@parameters@data$name[-idt] <- fC@parameters@data$desc[-idt]
+  names(fC@parameters@data$name)[-idt] <- parameters_name[-idt]
+  names(fC@parameters@data$desc)[-idt] <- parameters_desc[-idt]
+  
+  colnames(fC@exprs) <- fC@parameters@data$name
+  
+  if(!is.null(keep)){
+    if(all(keep%in%fC@parameters@data$name)){
+      fC <- fC[, fC@parameters@data$name %in% keep]
+      flowCore::write.FCS(fC, filename)
+    }else{
+      return(FALSE)
+    }
+  }else{
+    flowCore::write.FCS(fC, filename)
+  }
+  
+  return(filename)
+}
+
 
 #' Preproccessing Function
 #'
@@ -42,6 +78,7 @@ doPreprocessing <- function(file, filename, output, report=T){
     message("Adding extension .fcs")
     filename <- paste0(filename, ".fcs")
   }
+  
   
   ff <- flowCore::read.FCS(file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
@@ -76,6 +113,7 @@ doPreprocessing <- function(file, filename, output, report=T){
   res_QC$minireport$File <- file
   
   flowCore::write.FCS(ff_singlet, filename = paste0(output, "/", filename))
+  simplify_flowCore(paste0(output, "/", filename))
   
   if(report){
     reporte_filename <- paste0(output, "/resultsQC/Preprocessing.txt")

@@ -18,47 +18,6 @@ check_FCS <- function(ff){
     ff@parameters@data$desc[idt]-unlist(lapply(strsplit(ff@parameters@data$desc[idt], " "), `[`, 1))
 }
 
-#' Simplify flowCore object
-#'
-#' Remove empty channels
-#' @param fC flowCore to be simplified.
-#' @param shape_channel channels used to identify shape. Default  `FSC-A`, `FSC-H`, `SSC-A` and `SSC-H`.
-#' @keywords flowCore
-#' @export
-#' @examples
-#' simplify_flowCore()
-simplify_flowCore <- function(filename, keep = NULL){
-  tryCatch({
-    fC <- read.FCS(filename)
-    parameters_name <- names(fC@parameters@data$name)
-    parameters_desc <- names(fC@parameters@data$desc)
-    fC@parameters@data$name <- fC@parameters@data$desc
-    names(fC@parameters@data$name) <- parameters_name
-    names(fC@parameters@data$desc) <- parameters_desc
-    
-    colnames(fC@exprs) <- fC@parameters@data$name
-    
-    if(!is.null(keep)){
-      if(all(keep%in%fC@parameters@data$name)){
-        fC <- fC[, fC@parameters@data$name %in% keep]
-        write.FCS(fC, filename)
-      }else{
-        return(FALSE)
-      }
-    }else{
-      write.FCS(fC, filename)
-    }
-  },
-  error=function(e) {
-    file.remove(filename)
-    return(F)
-  })
-  
-  
-  
-  return(TRUE)
-}
-
 
 get_contour <- function(ff){
   
