@@ -18,6 +18,44 @@ filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
   return(fC_singlet)
 }
 
+#' Simplify flowCore object
+#'
+#' Remove empty channels
+#' @param fC flowCore to be simplified.
+#' @param shape_channel channels used to identify shape. Default  `FSC-A`, `FSC-H`, `SSC-A` and `SSC-H`.
+#' @keywords flowCore
+#' @export
+#' @examples
+#' simplify_flowCore()
+simplify_flowCore <- function(filename, keep = NULL){
+  tryCatch({
+    fC <- read.FCS(filename)
+    parameters_name <- names(fC@parameters@data$name)
+    parameters_desc <- names(fC@parameters@data$desc)
+    fC@parameters@data$name <- fC@parameters@data$desc
+    names(fC@parameters@data$name) <- parameters_name
+    names(fC@parameters@data$desc) <- parameters_desc
+    
+    colnames(fC@exprs) <- fC@parameters@data$name
+    
+    if(!is.null(keep)){
+      if(all(keep%in%fC@parameters@data$name)){
+        fC <- fC[, fC@parameters@data$name %in% keep]
+        write.FCS(fC, filename)
+      }else{
+        return(FALSE)
+      }
+    }else{
+      write.FCS(fC, filename)
+    }
+  },
+  error=function(e) {
+    file.remove(filename)
+    return(F)
+  })
+  return(TRUE)
+}
+
 
 #' Preproccessing Function
 #'
@@ -43,6 +81,7 @@ doPreprocessing <- function(file, filename, output, report=T){
     filename <- paste0(filename, ".fcs")
   }
   
+  simplify_flowCore(file)
   ff <- flowCore::read.FCS(file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   if("SPILL"%in%names(ff@description)){
