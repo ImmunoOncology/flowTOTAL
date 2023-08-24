@@ -109,7 +109,7 @@ doPreprocessing <- function(file, filename, output, report=T){
 #' @export
 #' @examples
 #' runPreprocessing()
-runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="Log_file_error_raw2clean.txt"){
+runPreprocessing <- function(metadata, output, report=T, cluster=NULL, log_file="Log_file_error_raw2clean.txt"){
   
   log_file_error <- function(messages){
     sink(log_file, append = T)
@@ -124,7 +124,7 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
   if(!c("filename")%in%colnames(metadata))
     stop("Error in metadata")
   
-  if(is.null(ncores)){
+  if(is.null(cluster)){
     for(i in 1:nrow(metadata)){
       tryCatch({
         file <- metadata$filename[i]
@@ -136,10 +136,6 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
       })
     }
   }else{
-    
-    cl <- parallel::makeCluster(ncores, setup_strategy = "sequential")
-    doParallel::registerDoParallel(cl)
-    library(doParallel)
     
     foreach(i = 1:nrow(metadata)) %dopar% {
       library(flowCore)
@@ -153,7 +149,6 @@ runPreprocessing <- function(metadata, output, report=T, ncores=NULL, log_file="
         log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
       })
     }
-    parallel::stopCluster(cl)
   }
   
 }

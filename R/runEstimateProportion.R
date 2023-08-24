@@ -365,7 +365,7 @@ doEstimateProportion <- function(filename, id = NULL, output.dir, info_panel, cu
   
 }
 
-runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NULL){
+runEstimateProprotion <- function(log_file_track, info_panel, output, cluster=NULL){
 
   counts <- read.delim(log_file_track, header = F)
   files <- counts[counts$V6%in%"Completed", ]
@@ -383,10 +383,7 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
     sink()
   }
   
-  if(!is.null(ncores)){
-    
-    cl <- parallel::makeCluster(ncores)
-    doParallel::registerDoParallel(cl)
+  if(!is.null(cluster)){
     
     foreach(i = 1:length(files)) %dopar% {
       library(flowCore)
@@ -398,8 +395,6 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
       error=function(e) {
         log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
       })
-      
-      parallel::stopCluster(cl)
       
     }
   }else{

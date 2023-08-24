@@ -318,7 +318,7 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
 
 runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), channel_bg, logicle_chnls=NULL, sd.max_it=0.75, 
                                 min.pct_it=0.01, target.fsc=50000, target.ssc=17500, min.ff_subset=250, 
-                                log_file="Log_file_error.txt", log_file_traditional="Log_file_error_traditional.txt", track_file="Log_file_track.txt", ncores=NULL){
+                                log_file="Log_file_error.txt", log_file_traditional="Log_file_error_traditional.txt", track_file="Log_file_track.txt", cluster=NULL){
   
   output.dir <- paste0(output, "/Backgating")
   if(!dir.exists(output.dir)) dir.create(output.dir)
@@ -355,11 +355,7 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
   if(!dir.exists(paste0(output.dir, "/PDF"))) dir.create(paste0(output.dir, "/PDF"))
   if(!dir.exists(paste0(output.dir, "/FCS"))) dir.create(paste0(output.dir, "/FCS"))
   
-  if(!is.null(ncores)){
-    
-    cl <- parallel::makeCluster(ncores)
-    doParallel::registerDoParallel(cl)
-    library(doParallel)
+  if(!is.null(cluster)){
     
     foreach(i = 1:nrow(metadata)) %dopar% {
       library(flowCore)
@@ -380,8 +376,6 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
         log_file_track(paste(filename_clean, filename, "\t", NA, NA, "Error", i, sep = "\t"))
       })
     }
-    
-    parallel::stopCluster(cl)
     
   }else{
     for(i in 1:nrow(metadata)){
