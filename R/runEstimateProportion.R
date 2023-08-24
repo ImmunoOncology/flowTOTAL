@@ -414,6 +414,4 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
     }
   }
   
-  return()
-  
 }
