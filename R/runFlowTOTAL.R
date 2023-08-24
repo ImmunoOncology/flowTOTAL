@@ -3,7 +3,7 @@
 runFlowTOTAL <- function(fcs_path, output, panel_backgating=NULL, panel_estimate=NULL){
 
   metadata <- data.frame(filename=list.files(fcs_path, full.names = T))
-  metadata$filename <-sapply(strsplit(metadata$filename, "/"), function(x) x[length(x)]) 
+  metadata$file <-sapply(strsplit(metadata$filename, "/"), function(x) x[length(x)]) 
   metadata$filename_clean <- paste0(output, "/fcs_clean/", metadata$file)
   
   message("Step1: runPreprocessing()")
