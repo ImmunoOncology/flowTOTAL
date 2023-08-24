@@ -103,6 +103,7 @@ doPreprocessing <- function(file, filename, output, report=T){
 #' @param cluster run through parallel package
 #' @param log_file Log file
 #' @keywords preprocessing
+#' @import flowCore
 #' @export
 #' @examples
 #' runPreprocessing()
