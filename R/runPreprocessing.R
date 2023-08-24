@@ -27,32 +27,34 @@ filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
 #' @export
 #' @examples
 #' simplify_flowCore()
-simplify_flowCore <- function(filename, keep = NULL){
-  tryCatch({
-    fC <- read.FCS(filename)
-    parameters_name <- names(fC@parameters@data$name)
-    parameters_desc <- names(fC@parameters@data$desc)
-    fC@parameters@data$name <- fC@parameters@data$desc
-    names(fC@parameters@data$name) <- parameters_name
-    names(fC@parameters@data$desc) <- parameters_desc
-    
-    colnames(fC@exprs) <- fC@parameters@data$name
-    
-    if(!is.null(keep)){
-      if(all(keep%in%fC@parameters@data$name)){
-        fC <- fC[, fC@parameters@data$name %in% keep]
-        write.FCS(fC, filename)
-      }else{
-        return(FALSE)
-      }
+simplify_flowCore <- function(filename, file, output, keep = NULL){
+  
+  output.raw <- paste0(output, "/fcs_raw")
+  if(!dir.exists(output.raw)) dir.create(output.raw)
+  new.file <- paste0(output.raw, "/", file)
+  
+  fC <- flowCore::read.FCS(filename)
+  parameters_name <- names(fC@parameters@data$name)
+  parameters_desc <- names(fC@parameters@data$desc)
+  idt <- unique(c(grep("[FS]SC-", fC@parameters@data$name), grep("Time", fC@parameters@data$name), which(is.na(fC@parameters@data$desc))))
+  
+  fC@parameters@data$name[-idt] <- fC@parameters@data$desc[-idt]
+  names(fC@parameters@data$name)[-idt] <- parameters_name[-idt]
+  names(fC@parameters@data$desc)[-idt] <- parameters_desc[-idt]
+  
+  colnames(fC@exprs) <- fC@parameters@data$name
+  
+  if(!is.null(keep)){
+    if(all(keep%in%fC@parameters@data$name)){
+      fC <- fC[, fC@parameters@data$name %in% keep]
+      flowCore::write.FCS(fC, new.file)
     }else{
-      write.FCS(fC, filename)
+      return(FALSE)
     }
-  },
-  error=function(e) {
-    file.remove(filename)
-    return(F)
-  })
+  }else{
+    flowCore::write.FCS(fC, new.file)
+  }
+  
   return(TRUE)
 }
 
@@ -81,7 +83,8 @@ doPreprocessing <- function(file, filename, output, report=T){
     filename <- paste0(filename, ".fcs")
   }
   
-  simplify_flowCore(file)
+  simplify_flowCore(file, filename, output)
+  
   ff <- flowCore::read.FCS(file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   if("SPILL"%in%names(ff@description)){
