@@ -29,9 +29,8 @@ filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
 #' simplify_flowCore()
 simplify_flowCore <- function(filename, file, output, keep = NULL){
   
-  output.raw <- paste0(output, "/fcs_raw")
-  if(!dir.exists(output.raw)) dir.create(output.raw)
-  new.file <- paste0(output.raw, "/", file)
+  if(!dir.exists(output)) dir.create(output)
+  new.file <- paste0(output, "/", file)
   
   fC <- flowCore::read.FCS(filename)
   parameters_name <- names(fC@parameters@data$name)
@@ -55,7 +54,7 @@ simplify_flowCore <- function(filename, file, output, keep = NULL){
     flowCore::write.FCS(fC, new.file)
   }
   
-  return(TRUE)
+  return(new.file)
 }
 
 
@@ -83,9 +82,9 @@ doPreprocessing <- function(file, filename, output, report=T){
     filename <- paste0(filename, ".fcs")
   }
   
-  simplify_flowCore(file, filename, output)
+  new.file <- simplify_flowCore(file, filename, gsub("fcs_clean", "fcs_raw", output))
   
-  ff <- flowCore::read.FCS(file)
+  ff <- flowCore::read.FCS(new.file)
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   if("SPILL"%in%names(ff@description)){
     ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
