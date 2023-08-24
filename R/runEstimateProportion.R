@@ -397,7 +397,6 @@ runEstimateProprotion <- function(log_file_track, info_panel, output, ncores=NUL
       },
       error=function(e) {
         log_file_error_traditional(paste(e, "Iter-->", i, "\n", "File: ", files[i]))
-        return(e)
       })
     }
   }else{
