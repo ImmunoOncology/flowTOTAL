@@ -25,9 +25,10 @@
 # runEstimateProprotion(log_file_track, info_panel, output, ncores=NULL)
 # 
 
-library(flowTOTAL)
-runFlowTOTAL("/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas/fcs_raw", 
-             "/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas", 
-             panel_backgating=c("PE-Cy7-A+", "SSC-A-"), 
-             panel_estimate="/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas/Info_panel.txt"
-            )
+# remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
+# library(flowTOTAL)
+# runFlowTOTAL("/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas/fcs_raw", 
+#              "/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas", 
+#              panel_backgating=c("PE-Cy7-A+", "SSC-A-"), 
+#              panel_estimate="/Volumes/TRANSCEND/IBIMA/Citometria/flowTOTAL-pruebas/Info_panel.txt"
+#             )
