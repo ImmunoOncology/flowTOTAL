@@ -1,3 +1,31 @@
+#' Custom Flow Auto QC from flowAI
+#'
+#' This function performs quality control for flow cytometry data using custom criteria.
+#' It calculates flow rates, signal quality, and flow margins to assess the data quality.
+#' 
+#' Monaco G, Chen H (2022). flowAI: automatic and interactive quality control for flow cytometry data. R package version 1.30.0, 10.18129/B9.bioc.flowAI.
+#'
+#' @param fcsfiles A flowSet containing raw FCS files to be analyzed.
+#' @param filename A character string to identify the analysis.
+#' @param timeCh Name of the time channel in the FCS files.
+#' @param second_fractionFR The second fraction for flow rate calculation. Default is 0.1.
+#' @param alphaFR The significance level for flow rate check. Default is 0.01.
+#' @param decompFR Logical indicating whether to use decomposition for flow rate check. Default is TRUE.
+#' @param ChExcludeFS Channels to be excluded from flow signal QC. Default is c("FSC", "SSC").
+#' @param outlier_binsFS Logical indicating whether to identify outlier bins for flow signal QC. Default is FALSE.
+#' @param pen_valueFS Penalty value for flow signal QC. Default is 500.
+#' @param max_cptFS Maximum number of change points for flow signal QC. Default is 3.
+#' @param ChExcludeFM Channels to be excluded from flow margin QC. Default is c("FSC", "SSC").
+#' @param sideFM Side for flow margin QC. Default is "both".
+#' @param neg_valuesFM Number of negative values allowed for flow margin QC. Default is 1.
+#' @param mini_report Filename for the mini report.
+#' @param folder_results Path to the folder for saving results.
+#'
+#' @return A list containing cleaned flow cytometry data (flowFrame) and a summary report.
+#'
+#' @import flowAI
+#' @import flowCore
+#' @export
 flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
                                  second_fractionFR = 0.1, alphaFR = 0.01, decompFR = TRUE,
                                  ChExcludeFS = c("FSC", "SSC"), outlier_binsFS = FALSE, pen_valueFS = 500,
@@ -122,6 +150,31 @@ flow_auto_qc_custom <- function (fcsfiles, filename="V1", timeCh = NULL,
   
 }
 
+
+#' Custom Gate with Tail from OpenCyto
+#'
+#' This function creates a custom gate with a tail based on specified parameters.
+#'
+#' Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.
+#'
+#' @param fr A flowFrame containing flow cytometry data.
+#' @param channel Name of the channel to create the gate on.
+#' @param filterId ID for the created gate.
+#' @param num_peaks Number of peaks to consider for tail gate calculation.
+#' @param ref_peak Reference peak for tail gate calculation.
+#' @param strict Logical indicating whether to strictly follow the cutoff point or not.
+#' @param tol Tolerance for calculating the cutoff point.
+#' @param side Side for gate creation ("left" or "right").
+#' @param min Minimum value for truncating data before gate creation.
+#' @param max Maximum value for truncating data before gate creation.
+#' @param bias Bias to adjust the cutoff point.
+#' @param positive Logical indicating whether gate should be positive or not.
+#'
+#' @return A rectangleGate representing the custom gate.
+#'
+#' @import flowCore
+#' @import openCyto
+#' @export
 gate_tail_custom <- function(fr, channel, filterId = "", num_peaks = 1,
                       ref_peak = 1, strict = TRUE, tol = 1e-2, side = "right", min = NULL, max = NULL, bias = 0, positive = TRUE, ...) {
   
@@ -147,6 +200,27 @@ gate_tail_custom <- function(fr, channel, filterId = "", num_peaks = 1,
   
 }
 
+#' Calculate Cytokine Cutpoint from OpenCyto
+#'
+#' This function calculates the cutpoint for a cytokine gate based on specified parameters.
+#'
+#' Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.
+#'
+#' @param x A numeric vector containing data values.
+#' @param num_peaks Number of peaks to consider for cutpoint calculation.
+#' @param ref_peak Reference peak for cutpoint calculation.
+#' @param method Method for calculating cutpoint ("first_deriv" or "second_deriv").
+#' @param tol Tolerance for calculating the cutoff point.
+#' @param adjust Adjustment factor for peak detection.
+#' @param side Side for cutpoint calculation ("left" or "right").
+#' @param strict Logical indicating whether to strictly follow the cutoff point or not.
+#' @param plot Logical indicating whether to plot the peak detection.
+#' @param auto_tol Logical indicating whether to automatically set tolerance based on peak values.
+#'
+#' @return The calculated cutpoint.
+#'
+#' @import openCyto
+#' @export
 cytokine_cutpoint <- function(x, num_peaks = 1, ref_peak = 1,
                                method = c("first_deriv", "second_deriv"),
                                tol = 1e-2, adjust = 1, side = "right", strict = TRUE, plot = FALSE, auto_tol = FALSE, ...) {
@@ -165,7 +239,7 @@ cytokine_cutpoint <- function(x, num_peaks = 1, ref_peak = 1,
     ref_peak <- num_peaks
   }
   
-  # TODO: Double-check that a cutpoint minimum found via 'first_deriv'
+  # Double-check that a cutpoint minimum found via 'first_deriv'
   # passes the second-derivative test.
   
   if (method == "first_deriv") {
@@ -220,6 +294,22 @@ cytokine_cutpoint <- function(x, num_peaks = 1, ref_peak = 1,
   cutpoint
 }
 
+#' Calculate Derivative of Density from OpenCyto
+#'
+#' This function calculates the derivative of the density function.
+#'
+#' Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.
+#'
+#' @param x A numeric vector containing data values.
+#' @param deriv Order of the derivative.
+#' @param bandwidth Bandwidth for kernel density estimation.
+#' @param adjust Adjustment factor for bandwidth.
+#' @param num_points Number of points for estimation.
+#'
+#' @return A list with x and y components representing the calculated derivative.
+#'
+#' @import flowStats
+#' @export
 deriv_density <- function(x, deriv = 1, bandwidth = NULL, adjust = 1,
                            num_points = 10000, ...) {
   
