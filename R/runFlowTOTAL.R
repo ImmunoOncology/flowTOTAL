@@ -20,17 +20,17 @@
 #'   panel_backgating = "panel_backgating.csv",
 #'   panel_estimate = "panel_estimate.csv",
 #'   cluster = my_cluster_object,
-#'   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProprotion")
+#'   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 #' )
 #'
-runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estimate = NULL, cluster = NULL, 
-                         steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProprotion")) {
-  
+runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estimate = NULL, cluster = NULL,
+                         steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")) {
+
   # Create a metadata data frame to store file information
   metadata <- data.frame(filename = list.files(fcs_path, full.names = TRUE))
-  metadata$file <- sapply(strsplit(metadata$filename, "/"), function(x) x[length(x)]) 
+  metadata$file <- sapply(strsplit(metadata$filename, "/"), function(x) x[length(x)])
   metadata$filename_clean <- file.path(output, "fcs_clean", metadata$file)
-  
+
   # Step 1: Preprocessing
   if ("runPreprocessing" %in% steps) {
     message("Step 1: runPreprocessing")
@@ -38,7 +38,7 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estima
   } else {
     message("Step 1: runPreprocessing - skipped")
   }
-  
+
   # Step 2: Density-Based Backgating
   if ("runDensityBackgating" %in% steps) {
     message("Step 2: runDensityBackgating")
@@ -46,14 +46,14 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estima
   } else {
     message("Step 2: runDensityBackgating - skipped")
   }
-  
+
   # Step 3: Proportion Estimation
-  if ("runEstimateProprotion" %in% steps) {
-    message("Step 3: runEstimateProprotion")
+  if ("runEstimateProportion" %in% steps) {
+    message("Step 3: runEstimateProportion")
     info_panel <- read.delim(panel_estimate)
     log_file_track <- file.path(output, "Log_file_track.txt")
-    runEstimateProprotion(log_file_track, info_panel, output, cluster = cluster)
+    runEstimateProportion(log_file_track, info_panel, output, cluster = cluster)
   } else {
-    message("Step 3: runEstimateProprotion - skipped")
+    message("Step 3: runEstimateProportion - skipped")
   }
 }
