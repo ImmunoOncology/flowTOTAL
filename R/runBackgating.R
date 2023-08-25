@@ -222,8 +222,8 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   ff.raw <- ff
 
   # Define comparison functions for gating operations
-  `[+]` <- function(a, b) { a > b }
-  `[-]` <- function(a, b) { a < b }
+  `[+` <- function(a, b){ a>b}
+  `[-` <- function(a, b){ a<b}
 
   # Extract panel channel names and signs from channel_bg
   panel_channel <- sapply(channel_bg, function(x) substr(x, 1, nchar(x) - 1))
@@ -456,7 +456,7 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
   # Define a function to process a single file
   process_file <- function(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset) {
     filename_clean <- metadata$filename_clean[i]
-    filename <- unlist(strsplit(filename_clean, "/"))[length(strsplit(filename_clean, "/"))]
+    filename <- basename(filename_clean)
 
     tryCatch({
       ff <- flowCore::read.FCS(filename_clean)
