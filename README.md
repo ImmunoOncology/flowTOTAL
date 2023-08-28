@@ -1,5 +1,5 @@
 [![Github All Releases](https://img.shields.io/github/downloads/ImmunoOncology/flowTOTAL/total.svg)]()
-![Static badge 1](https://img.shields.io/badge/ImmunOncology-gray_Bioinformatics-blue)
+![Static badge 1](https://img.shields.io/badge/ImmunOncology-Bioinformatics-blue)
 ![Static badge 2](https://img.shields.io/badge/Flow%20cytometry-8A2BE2)
 
 
