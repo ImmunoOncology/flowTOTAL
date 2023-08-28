@@ -39,7 +39,7 @@ To create the tabular file required for Panel Estimation, follow these steps:
 1. **Objective Channels Check**: Begin by inspecting the flowCore object to identify the relevant objective channels contained within the FCS file. These channels are essential for performing flowTOTAL analysis.
 
 <div style="text-align:center">
-  <img src="man/figures/flowCore_object-panel.png" alt="FlowCore Object">
+  <img src="man/figures/flowCore_object-panel.png" alt="FlowCore Object" width="60%" height="60%">
 </div>
 
    In the above image, the red rectangle highlights where to locate the channels relevant for flowTOTAL analysis. Focus only on channels without NA values (indicated by the green rectangle). In this specific example, we intend to use the positive CD3 (CD3+) channel for backgating.
