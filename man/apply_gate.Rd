@@ -2,7 +2,7 @@
 % Please edit documentation in R/runEstimateProportion.R
 \name{apply_gate}
 \alias{apply_gate}
-\title{Apply gate_flowclust_1d gate}
+\title{Apply openCyto gate}
 \usage{
 apply_gate(
   ff,
@@ -41,7 +41,7 @@ A list containing the following components:
 \item{gate_bg}{A list of gates applied to each channel.}
 }
 \description{
-Apply gate_flowclust_1d gate to one or two channels. If enough information about the population is kept and the join parameter is active,
+Apply openCyto gate to one or two channels. If enough information about the population is kept and the join parameter is active,
 a target gate_flowclust_2d is applied to increase resolution.
 }
 \examples{

@@ -5,25 +5,31 @@
 #'
 #' @param fcs_path The path to the folder containing FCS files.
 #' @param output The output directory for results.
-#' @param panel_backgating The panel for density-based backgating (default: NULL).
-#' @param panel_estimate The panel for proportion estimation (default: NULL).
+#' @param panel_backgating The channel for density-based backgating. Vector of channel names and signs specifying the gating operations.
+#' @param panel_estimate The panel for proportion estimation. File path.
+#' @param log_file_track Path to log_file_track.txt file in order to run
+#' runEstimateProportion (default: NULL. It takes the one created during runDensityBackgating in output/log_file_track.txt)
 #' @param cluster An optional cluster object for parallel processing (default: NULL).
-#' @param steps A character vector specifying the steps to run (default: all steps).
+#' @param steps A character vector specifying the steps to run (default: runPreprocessing,
+#' runDensityBackgating and runEstimateProportion).
 #'
 #' @keywords flowCore
 #' @export
 #'
 #' @examples
+#' library(flowCore)
+#' library(flowTOTAL)
+#'
 #' runFlowTOTAL(
 #'   fcs_path = "path/to/fcs_files",
 #'   output = "output_directory",
-#'   panel_backgating = "panel_backgating.csv",
-#'   panel_estimate = "panel_estimate.csv",
+#'   panel_backgating = "CD3+",
+#'   panel_estimate = "panel_estimate.txt",
 #'   cluster = my_cluster_object,
 #'   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 #' )
 #'
-runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estimate = NULL, cluster = NULL,
+runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log_file_track=NULL, cluster = NULL,
                          steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")) {
 
   # Create a metadata data frame to store file information
@@ -50,9 +56,8 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating = NULL, panel_estima
   # Step 3: Proportion Estimation
   if ("runEstimateProportion" %in% steps) {
     message("Step 3: runEstimateProportion")
-    info_panel <- read.delim(panel_estimate)
-    log_file_track <- file.path(output, "Log_file_track.txt")
-    runEstimateProportion(log_file_track, info_panel, output, cluster = cluster)
+    if(is.null(log_file_track)) log_file_track <- file.path(output, "Log_file_track.txt")
+    runEstimateProportion(log_file_track, panel_estimate, output, cluster = cluster)
   } else {
     message("Step 3: runEstimateProportion - skipped")
   }

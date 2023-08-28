@@ -23,12 +23,14 @@ deriv_density(
 \item{adjust}{Adjustment factor for bandwidth.}
 
 \item{num_points}{Number of points for estimation.}
+
+\item{...}{parameter to pass to drvkde}
 }
 \value{
 A list with x and y components representing the calculated derivative.
 }
 \description{
-This function calculates the derivative of the density function.
+This function calculates the derivative of the density function. It is based on \code{.deriv_density} from OpenCyto pacakge.
 }
 \details{
 Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.

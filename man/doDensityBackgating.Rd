@@ -62,14 +62,7 @@ channel_bg <- c("CD3-FITC", "CD4-PE", "CD8-APC")
 # Perform density-based gating
 doDensityBackgating(ff, "sample_data.fcs", output.dir = "output_directory", channel_bg = channel_bg)
 
-}
-\seealso{
-\code{\link{ggcyto::autoplot}}
-\code{\link{ggplot2::ggsave}}
-\code{\link{flowCore::filter}}
-\code{\link{flowCore::write.FCS}}
-\code{\link{openCyto::gate_tail_custom}}
-\code{\link{openCyto::gate_flowclust_2d}}
+
 }
 \keyword{cytometry}
 \keyword{density-based}

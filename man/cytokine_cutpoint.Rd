@@ -38,12 +38,14 @@ cytokine_cutpoint(
 \item{plot}{Logical indicating whether to plot the peak detection.}
 
 \item{auto_tol}{Logical indicating whether to automatically set tolerance based on peak values.}
+
+\item{...}{parameter to pass to deriv_density}
 }
 \value{
 The calculated cutpoint.
 }
 \description{
-This function calculates the cutpoint for a cytokine gate based on specified parameters.
+This function calculates the cutpoint for a cytokine gate based on specified parameters. It is based on \code{.cytokine_cutpoint} from OpenCyto pacakge.
 }
 \details{
 Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.

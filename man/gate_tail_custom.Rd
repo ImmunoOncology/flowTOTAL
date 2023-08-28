@@ -44,12 +44,14 @@ gate_tail_custom(
 \item{bias}{Bias to adjust the cutoff point.}
 
 \item{positive}{Logical indicating whether gate should be positive or not.}
+
+\item{...}{arguments to pass to cytokine_cutpoint}
 }
 \value{
 A rectangleGate representing the custom gate.
 }
 \description{
-This function creates a custom gate with a tail based on specified parameters.
+This function creates a custom gate with a tail based on specified parameters. It is based on \code{gate_tail} from OpenCyto pacakge.
 }
 \details{
 Finak, Greg, Frelinger, Jacob, Jiang, Wenxin, Newell, Evan W., Ramey, John, Davis, Mark M., Kalams, Spyros A., De Rosa, Stephen C., Gottardo, Raphael (2014). “OpenCyto: An Open Source Infrastructure for Scalable, Robust, Reproducible, and Automated, End-to-End Flow Cytometry Data Analysis.” PLoS Computational Biology, 10(8), e1003806.

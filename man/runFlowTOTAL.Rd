@@ -7,10 +7,11 @@
 runFlowTOTAL(
   fcs_path,
   output,
-  panel_backgating = NULL,
-  panel_estimate = NULL,
+  panel_backgating,
+  panel_estimate,
+  log_file_track = NULL,
   cluster = NULL,
-  steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProprotion")
+  steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 )
 }
 \arguments{
@@ -18,26 +19,33 @@ runFlowTOTAL(
 
 \item{output}{The output directory for results.}
 
-\item{panel_backgating}{The panel for density-based backgating (default: NULL).}
+\item{panel_backgating}{The panel for density-based backgating. File path.}
 
-\item{panel_estimate}{The panel for proportion estimation (default: NULL).}
+\item{panel_estimate}{The panel for proportion estimation. File path.}
+
+\item{log_file_track}{Path to log_file_track.txt file in order to run
+runEstimateProportion (default: NULL. It takes the one created during runDensityBackgating in output/log_file_track.txt)}
 
 \item{cluster}{An optional cluster object for parallel processing (default: NULL).}
 
-\item{steps}{A character vector specifying the steps to run (default: all steps).}
+\item{steps}{A character vector specifying the steps to run (default: runPreprocessing,
+runDensityBackgating and runEstimateProportion).}
 }
 \description{
 This function runs the complete flow analysis pipeline in sequential or parallel mode.
 It includes preprocessing, density-based backgating, and proportion estimation steps.
 }
 \examples{
+library(flowCore)
+library(flowTOTAL)
+
 runFlowTOTAL(
   fcs_path = "path/to/fcs_files",
   output = "output_directory",
   panel_backgating = "panel_backgating.csv",
   panel_estimate = "panel_estimate.csv",
   cluster = my_cluster_object,
-  steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProprotion")
+  steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 )
 
 }

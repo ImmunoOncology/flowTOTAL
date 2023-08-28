@@ -57,7 +57,7 @@ flow_auto_qc_custom(
 A list containing cleaned flow cytometry data (flowFrame) and a summary report.
 }
 \description{
-This function performs quality control for flow cytometry data using custom criteria.
+This function performs quality control for flow cytometry data using custom criteria based on \code{flow_auto_qc} function from flowAI package.
 It calculates flow rates, signal quality, and flow margins to assess the data quality.
 }
 \details{

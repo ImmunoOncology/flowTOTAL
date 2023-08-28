@@ -22,7 +22,8 @@ channels based on their descriptions. It also allows for keeping specific channe
 \examples{
 \dontrun{
 simplified_file <- simplify_flowCore(filename = "path/to/input.fcs")
-simplified_kept_file <- simplify_flowCore(filename = "path/to/input.fcs", keep = c("FSC-A", "SSC-A"))
+simplified_kept_file <- simplify_flowCore(filename = "path/to/input.fcs",
+keep = c("FSC-A", "SSC-A"))
 }
 
 }

@@ -58,10 +58,6 @@ check_FCS <- function(ff) {
 #'
 #' @param ff An object of class 'flowFrame' representing the flow cytometry data.
 #'
-#' @importFrom ks kde Hns
-#' @importFrom sp point.in.polygon
-#' @import ggplotify
-#' @import ggplot2
 #'
 #' @return A list of contour lines containing x and y coordinates.
 #'
@@ -80,10 +76,25 @@ check_FCS <- function(ff) {
 #' @export
 get_contour <- function(ff) {
   # Helper function to create a sequence of consecutive numbers
-  mkseq <- function(my_vector) {
-    diffs <- diff(my_vector)
-    unique_vals <- c(my_vector[1], my_vector[diffs != 1] + 1)
-    return(unique_vals)
+  mkseq <- function(my_vector){
+    my_vector_cp <- my_vector
+    i <- 1
+    j <- i
+    my_seq <- F
+    while(i<=(length(my_vector)-1)){
+      if(my_vector[i]==(my_vector[i+1]-1)){
+        if(!my_seq){
+          j <- i
+        }
+        my_seq <- T
+        my_vector_cp[i+1] <- my_vector[j]
+      }else{
+        my_seq <- F
+        j <- i+1
+      }
+      i <- i+1
+    }
+    return(unique(my_vector_cp))
   }
 
   # Extract FSC-A and SSC-A channels from flowFrame object
@@ -183,12 +194,7 @@ get_contour <- function(ff) {
 #'
 #' @return Number of selected events after gating.
 #'
-#' @import ggcyto
-#' @import ggplot2
-#' @importFrom flowCore filter write.FCS
-#' @importFrom stats density
-#' @importFrom sp point.in.polygon
-#' @importFrom openCyto .find_peaks gate_tail_custom gate_flowclust_2d
+#' @import flowCore
 #'
 #' @export
 #'
@@ -207,13 +213,6 @@ get_contour <- function(ff) {
 #' # Perform density-based gating
 #' doDensityBackgating(ff, "sample_data.fcs", output.dir = "output_directory", channel_bg = channel_bg)
 #'
-#' @seealso
-#' \code{\link{ggcyto::autoplot}}
-#' \code{\link{ggplot2::ggsave}}
-#' \code{\link{flowCore::filter}}
-#' \code{\link{flowCore::write.FCS}}
-#' \code{\link{openCyto::gate_tail_custom}}
-#' \code{\link{openCyto::gate_flowclust_2d}}
 #'
 #' @keywords flow cytometry gating density-based
 doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC-A"), channel_bg, logicle_chnls=NULL, sd.max_it=0.75, min.pct_it=0.01, target.fsc=50000, target.ssc=17500, min.ff_subset=250) {
@@ -374,10 +373,16 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   }
 
   # Create a final density plot of the selected events
-  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100)
+  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100) +
+
 
   # Arrange plots and save as PDF
-  p <- ggpubr::ggarrange(plotlist = list(ggcyto::as.ggplot(p1), ggcyto::as.ggplot(p_gate), ggcyto::as.ggplot(p2), ggcyto::as.ggplot(p_final)), nrow = 2, ncol = 2)
+  p <- ggpubr::ggarrange(plotlist = list(ggcyto::as.ggplot(p1),
+                                         ggcyto::as.ggplot(p_gate)+ggplot2::xlab(panel_channel[1]) + ggplot2::ylab(panel_channel[2]),
+                                         ggcyto::as.ggplot(p2),
+                                         ggcyto::as.ggplot(p_final)+ggplot2::xlab(panel_channel[1]) + ggplot2::ylab(panel_channel[2])
+                                         ),
+                         nrow = 2, ncol = 2)
   ggplot2::ggsave(paste0(output.dir, "/PDF/", gsub(".fcs", "", filename, fixed = TRUE), ".pdf"), plot = p, device = "pdf", width = 15, height = 12)
 
   # Write the selected events to an FCS file
@@ -472,7 +477,7 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
 
   # Set up parallel processing
   if(!is.null(cluster)){
-    library(doParallel)
+    requireNamespace(foreach)
     foreach(i = 1:nrow(metadata), .packages = c("flowCore")) %dopar% {
       process_file(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset)
     }

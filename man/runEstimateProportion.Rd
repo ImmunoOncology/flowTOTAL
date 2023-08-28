@@ -4,12 +4,13 @@
 \alias{runEstimateProportion}
 \title{Run Proportion Estimation and Gating for Multiple Files}
 \usage{
-runEstimateProportion(log_file_track, info_panel, output, cluster = NULL)
+runEstimateProportion(log_file_track, panel_estimate, output, cluster = NULL)
 }
 \arguments{
 \item{log_file_track}{The path to the log file containing file tracking information.}
 
-\item{info_panel}{A data frame containing information about patterns and labels.}
+\item{panel_estimate}{File path to the panel for proportion estimation.
+It contains information about patterns and labels.}
 
 \item{output}{The output directory for results.}
 
@@ -22,8 +23,8 @@ and outputs results to the specified directory.
 }
 \examples{
 runEstimateProportion(
-  log_file_track = "path/to/log_file.txt",
-  info_panel = info_panel_data_frame,
+  log_file_track = "output_directory/log_file.txt",
+  panel_estimate = "panel_estimate.csv",
   output = "output_directory"
 )
 

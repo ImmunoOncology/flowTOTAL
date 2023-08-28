@@ -24,7 +24,8 @@ singlet gating, and generating a preprocessing report.
 }
 \examples{
 \dontrun{
-doPreprocessing(file = "path/to/input.fcs", filename = "preprocessed_input.fcs", output = "output_directory")
+doPreprocessing(file = "path/to/input.fcs", filename =
+  "preprocessed_input.fcs", output = "output_directory")
 }
 
 }
