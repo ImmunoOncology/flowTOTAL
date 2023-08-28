@@ -1,6 +1,6 @@
-[![Github All Releases](https://img.shields.io/github/downloads/ImmunoOncology/flowTOTAL/total.svg)]()
 ![Static badge 1](https://img.shields.io/badge/ImmunOncology-Bioinformatics-blue)
 ![Static badge 2](https://img.shields.io/badge/Flow%20cytometry-8A2BE2)
+[![Github All Releases](https://img.shields.io/github/downloads/ImmunoOncology/flowTOTAL/total.svg)]()
 
 
 # flowTOTAL: flow cyTometry auTOmaTic AnaLysis <a href='https://github.com/ImmunoOncology/flowTOTAL'><img src='man/figures/logo.png' align="right" height="139" /></a>
