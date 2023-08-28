@@ -1,0 +1,5 @@
+Pattern	Label
+CD3+	CD3 Tcell
+CD3+.CD8+	CD8 Tcell
+CD3+.CD8+.CD279$+;CD274^-	PD1 Tcell
+CD3+.CD8+.CD279$-;CD274^+	PDL1 Tcell

@@ -13,20 +13,24 @@ Description: flowTOTAL is a user-friendly command line workflow to analyze flow 
           During preprocessing, each.FCS will be corrected for fluorescence spillover (compensation), 
           abnormalities will be detected by evaluating flow rate and signal acquisition, and doublets will be removed using forward scatter (QC). 
           A population of interest will be specified for the traditional analysis, and the pipeline will proceed with normalization, dimensionality reduction, and clustering.
-License: GPL-3
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Imports:
   flowCore (>= 2.10.0), 
-  flowWorkspace (>= 4.13.1),
   ggplot2 (>= 3.4.2),
   ggcyto (>= 1.26.4),
   ggpubr, 
   openCyto (>= 2.10.1), 
   flowAI (>= 1.28.0),
-  PeacoQC (>= 1.8.0)
-  
-  
-  
+  PeacoQC (>= 1.8.0),
+  doParallel, 
+  flowStats, 
+  foreach, 
+  ggplotify,
+  ks, 
+  sp
+Depends: 
+    R (>= 2.10)

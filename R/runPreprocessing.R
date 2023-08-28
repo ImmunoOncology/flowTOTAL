@@ -1,192 +1,244 @@
-#' Filtering singlets
+#' Filter Singlet Cells from Flow Cytometry Data
 #'
-#' Double checking for singlets by looking `FSC-A` and `FSC-H` channels.
-#' @param fC flowCore with the preprocess FCS data.
-#' @param chnl channels used to identify singlets. Default  `FSC-A` and `FSC-H`.
-#' @keywords singlets
+#' This function filters singlet cells from flow cytometry data using the PeacoQC package
+#' to remove doublets and the openCyto package for singlet gating. It is a double checking for singlets by looking `FSC-A` and `FSC-H` channels.
+#'
+#' @param fC A flow cytometry dataset (typically a flowFrame object) containing the raw data from flowCore package.
+#' @param chnl A character vector of length 2 specifying the channels to use for singlet gating.
+#'             The default is c("FSC-A", "FSC-H").
+#'
+#' @return A flow cytometry dataset with only singlet cells based on the gating results.
+#'
+#' @import PeacoQC
 #' @import flowCore
-#' @export
+#' @import openCyto
+#'
 #' @examples
-#' filterSinglets()
-filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")){
+#' \dontrun{
+#' filtered_data <- filterSinglets(fC = my_flow_data, chnl = c("FSC-A", "FSC-H"))
+#' }
+#'
+#' @export
+filterSinglets <- function(fC, chnl = c("FSC-A", "FSC-H")) {
+  # Remove doublets using PeacoQC package
   fC_PeacoQC <- PeacoQC::RemoveDoublets(fC, channel1 = chnl[1], channel2 = chnl[2])
-  library(flowCore)
+
+  # Perform singlet gating using openCyto package
   gate_singlet <- openCyto:::.singletGate(fC_PeacoQC, channels = chnl)
+
+  # Apply singlet gating to the data
   idt_singlet <- flowCore::filter(fC_PeacoQC, gate_singlet)@subSet
+
+  # Create a new flow cytometry dataset with only singlet cells
   fC_singlet <- fC_PeacoQC
   fC_singlet@exprs <- fC_PeacoQC@exprs[idt_singlet, ]
+
   return(fC_singlet)
 }
 
-#' Simplify flowCore object
+
+#' Simplify flowCore Object
 #'
-#' Remove empty channels
-#' @param fC flowCore to be simplified.
-#' @param shape_channel channels used to identify shape. Default  `FSC-A`, `FSC-H`, `SSC-A` and `SSC-H`.
-#' @keywords flowCore
-#' @export
+#' This function simplifies a flowCore object by removing empty channels and renaming
+#' channels based on their descriptions. It also allows for keeping specific channels if needed.
+#'
+#' @param filename The path to the FCS file to be simplified.
+#' @param keep A character vector specifying the names of channels to keep. Default is NULL.
+#'
+#' @return If `keep` is NULL, returns the path to the simplified FCS file. If `keep` is specified,
+#'         returns the path to the simplified FCS file after keeping only specified channels.
+#'
+#' @import flowCore
+#'
 #' @examples
-#' simplify_flowCore()
-simplify_flowCore <- function(filename, keep = NULL){
-  
+#' \dontrun{
+#' simplified_file <- simplify_flowCore(filename = "path/to/input.fcs")
+#' simplified_kept_file <- simplify_flowCore(filename = "path/to/input.fcs",
+#' keep = c("FSC-A", "SSC-A"))
+#' }
+#'
+#' @export
+simplify_flowCore <- function(filename, keep = NULL) {
+
+  # Read the FCS file using flowCore
   fC <- flowCore::read.FCS(filename)
+
+  # Identify indices of shape and time channels
   parameters_name <- names(fC@parameters@data$name)
   parameters_desc <- names(fC@parameters@data$desc)
   idt <- unique(c(grep("[FS]SC-", fC@parameters@data$name), grep("Time", fC@parameters@data$name), which(is.na(fC@parameters@data$desc))))
-  
+
+  # Update parameter names and descriptions
   fC@parameters@data$name[-idt] <- fC@parameters@data$desc[-idt]
   names(fC@parameters@data$name)[-idt] <- parameters_name[-idt]
   names(fC@parameters@data$desc)[-idt] <- parameters_desc[-idt]
-  
+
+  # Update column names in the exprs matrix
   colnames(fC@exprs) <- fC@parameters@data$name
-  
-  if(!is.null(keep)){
-    if(all(keep%in%fC@parameters@data$name)){
+
+  # Keep specified parameters and write to file if needed
+  if (!is.null(keep)) {
+    if (all(keep %in% fC@parameters@data$name)) {
       fC <- fC[, fC@parameters@data$name %in% keep]
       flowCore::write.FCS(fC, filename)
-    }else{
+    } else {
       return(FALSE)
     }
-  }else{
+  } else {
     flowCore::write.FCS(fC, filename)
   }
-  
+
   return(filename)
 }
 
 
-#' Preproccessing Function
+#' Perform Preprocessing on Flow Cytometry Data
 #'
-#' This function allows run preprocessing analysis for raw FCS file. It does the compensation and
-#' the QC (remove doublets and anomalies).
-#' @param file path to the file FCS to run.
-#' @param filename filename for the cleaned FCS.
-#' @param output path to the location for the cleaned FCS.
-#' @param report should report number of anomalies and doublets. Default set to TRUE.
-#' @keywords preprocessing
-#' @export
+#' This function performs a series of preprocessing steps on flow cytometry data, including quality control, compensation,
+#' singlet gating, and generating a preprocessing report.
+#'
+#' @param file Path to the input FCS file.
+#' @param filename Desired name for the output FCS file (without extension).
+#' @param output Directory where output files and reports will be saved.
+#' @param report Logical indicating whether to generate a preprocessing report. Default is TRUE.
+#'
+#' @return If successful, the function performs preprocessing steps and generates output files.
+#'
+#' @import flowCore
+#'
 #' @examples
-#' doPreprocessing()
-doPreprocessing <- function(file, filename, output, report=T){
-  
-  if(!dir.exists(output)){
+#' \dontrun{
+#' doPreprocessing(file = "path/to/input.fcs", filename =
+#'   "preprocessed_input.fcs", output = "output_directory")
+#' }
+#'
+#' @export
+doPreprocessing <- function(file, filename, output, report = TRUE) {
+
+  # Create the output directory if it doesn't exist
+  if (!dir.exists(output)) {
     message("Creating directory -->", output)
     dir.create(output)
   }
-  
-  if(!grepl(".fcs$", filename)){
+
+  # Add .fcs extension if missing
+  if (!grepl(".fcs$", filename)) {
     message("Adding extension .fcs")
     filename <- paste0(filename, ".fcs")
   }
-  
-  
+
+  # Read the input FCS file
   ff <- flowCore::read.FCS(file)
+
+  # Set identifier and compensate if necessary
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
-  if("SPILL"%in%names(ff@description)){
+  if ("SPILL" %in% names(ff@description)) {
     ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
-  }else{
+  } else {
     ff_comp <- ff
   }
-  
-  cat(paste0("Quality control for the file: ", filename,
-             "\n"))
-  
+
+  cat(paste0("Quality control for the file: ", filename, "\n"))
+
+  # Perform quality control and generate mini-report
   res_QC <- tryCatch({
-    flow_auto_qc_custom(ff_comp, filename = filename, ChExcludeFS = NULL, ChExcludeFM=NULL, mini_report="Preprocessing", folder_results=paste0(output, "/resultsQC"))
-  }, error=function(x){
+    flow_auto_qc_custom(ff_comp, filename = filename, ChExcludeFS = NULL, ChExcludeFM = NULL, mini_report = "Preprocessing", folder_results = paste0(output, "/resultsQC"))
+  }, error = function(x) {
     res_QC <- list(
-      FCS=ff_comp,
-      minireport=(data.frame("File"=NA, "N.initial.events"=NA, "FlowRateQC"=NA, "FlowSignalQC"=NA, "FlowMarginQC"=NA, "RemoveDoublets"=NA, "N.final.events"=NA))
+      FCS = ff_comp,
+      minireport = data.frame("File" = NA, "N.initial.events" = NA, "FlowRateQC" = NA, "FlowSignalQC" = NA, "FlowMarginQC" = NA, "RemoveDoublets" = NA, "N.final.events" = NA)
     )
     return(res_QC)
   })
   ff_QC <- res_QC$FCS
-  chnl <-  c("FSC-A", "FSC-H")[c("FSC-A", "FSC-H")%in%ff_QC@parameters@data$name]
-  if(length(chnl)==2){
+
+  # Identify appropriate channels for singlet gating
+  chnl <- c("FSC-A", "FSC-H")[c("FSC-A", "FSC-H") %in% ff_QC@parameters@data$name]
+
+  # Apply singlet gating if necessary
+  if (length(chnl) == 2) {
     ff_singlet <- filterSinglets(ff_QC, chnl = chnl)
-  }else{
+  } else {
     ff_singlet <- ff_QC
   }
-  
-  res_QC$minireport$RemoveDoublets <- nrow(ff_QC@exprs)-nrow(ff_singlet@exprs)
+
+  # Update the preprocessing mini-report
+  res_QC$minireport$RemoveDoublets <- nrow(ff_QC@exprs) - nrow(ff_singlet@exprs)
   res_QC$minireport$N.final.events <- nrow(ff_singlet@exprs)
   res_QC$minireport$File <- file
-  
-  flowCore::write.FCS(ff_singlet, filename = paste0(output, "/", filename))
-  simplify_flowCore(paste0(output, "/", filename))
-  
-  if(report){
-    reporte_filename <- paste0(output, "/resultsQC/Preprocessing.txt")
-    if(!dir.exists(paste0(output, "/resultsQC"))) dir.create(paste0(output, "/resultsQC"))
+
+  # Write and simplify the output FCS file
+  flowCore::write.FCS(ff_singlet, filename = file.path(output, filename))
+  simplify_flowCore(file.path(output, filename))
+
+  # Generate and save the preprocessing report
+  if (report) {
+    reporte_filename <- file.path(output, "/resultsQC/Preprocessing.txt")
+    if (!dir.exists(file.path(output, "/resultsQC"))) dir.create(file.path(output, "/resultsQC"))
     write.table(
       x = res_QC$minireport,
-      file = reporte_filename
-      , col.names = !file.exists(reporte_filename)
-      , sep = "\t"
-      , row.names = F
-      , append = file.exists(reporte_filename)
-      , quote = F
+      file = reporte_filename,
+      col.names = !file.exists(reporte_filename),
+      sep = "\t",
+      row.names = FALSE,
+      append = file.exists(reporte_filename),
+      quote = FALSE
     )
   }
 }
 
-
-
-#' Run preproccessing Function
+#' Run Preprocessing Function
 #'
-#' This function allows run preprocessing analysis for raw FCS file. It does the compensation and
-#' the QC (remove doublets and anomalies).
-#' @param metadata data.frame  with filename column
-#' @param filename filename for the cleaned FCS.
-#' @param output path to the location for the cleaned FCS.
-#' @param report should report number of anomalies and doublets. Default set to TRUE.
-#' @param cluster run through parallel package
-#' @param log_file Log file
-#' @keywords preprocessing
+#' This function runs the preprocessing analysis for raw FCS files. It performs compensation and quality control,
+#' including removing doublets and anomalies.
+#'
+#' @param metadata A data frame with a column named "filename" containing paths to the raw FCS files.
+#' @param output Path to the location where the cleaned FCS files will be saved.
+#' @param report Logical indicating whether to report the number of anomalies and doublets. Default is TRUE.
+#' @param cluster Number of parallel workers to be used for processing. Default is NULL.
+#' @param log_file Path to the log file where error messages will be written.
+#'
+#' @return This function runs the preprocessing analysis and generates cleaned FCS files and reports.
+#'
 #' @import flowCore
+#' @import doParallel
+#' @import foreach
 #' @export
-#' @examples
-#' runPreprocessing()
-runPreprocessing <- function(metadata, output, report=T, cluster=NULL, log_file="Log_file_error_raw2clean.txt"){
-  
-  log_file_error <- function(messages){
-    sink(log_file, append = T)
-    for(i in messages){
-      cat(i, "\n")
-    }
+runPreprocessing <- function(metadata, output, report = TRUE, cluster = NULL, log_file = "Log_file_error_raw2clean.txt") {
+
+  log_file_error <- function(messages) {
+    sink(log_file, append = TRUE)
+    cat(paste(messages, "\n"), sep = "\n")
     sink()
   }
-  
-  output <- paste0(output, "/fcs_clean")
-  
-  if(!c("filename")%in%colnames(metadata))
+
+  # Set the output directory
+  output <- file.path(output, "fcs_clean")
+
+  # Check if "filename" column exists in metadata
+  if (!"filename" %in% colnames(metadata))
     stop("Error in metadata")
-  
-  if(is.null(cluster)){
-    for(i in 1:nrow(metadata)){
-      tryCatch({
-        file <- metadata$filename[i]
-        filename <- sapply(strsplit(file, "/"), function(x) x[length(x)])
-        doPreprocessing(file, filename, output, report=T)
-      },
-      error=function(e) {
-        log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
-      })
-    }
-  }else{
-    
-    foreach(i = 1:nrow(metadata)) %dopar% {
-      library(flowCore)
-      
-      tryCatch({
-        file <- metadata$filename[i]
-        filename <- sapply(strsplit(file, "/"), function(x) x[length(x)])
-        doPreprocessing(file, filename, output, report=T)
-      },
-      error=function(e) {
-        log_file_error(paste(e, "Iter-->", i, "\n", "File: ", metadata$filename[i]))
-      })
-    }
+
+  # Define the preprocessing function
+  preprocess_function <- function(file) {
+    filename <- basename(file)
+    tryCatch({
+      doPreprocessing(file, filename, output, report = report)
+    }, error = function(e) {
+      log_file_error(paste(e, "File:", filename))
+    })
   }
-  
+
+  # Perform preprocessing sequentially or in parallel
+  if (is.null(cluster)) {
+    for (i in 1:nrow(metadata)) {
+      preprocess_function(metadata$filename[i])
+    }
+  } else {
+    requireNamespace(foreach)
+    foreach(i = 1:nrow(metadata), .combine = 'c') %dopar% {
+      preprocess_function(metadata$filename[i])
+    }
+    stopCluster(cl)
+  }
 }
