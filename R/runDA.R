@@ -1,4 +1,6 @@
 
+#' doDA
+#' @export
 doDA <- function(sce_file, output, response, response_label){
 
   dir.ouput <- file.path(output, "DA")
@@ -100,6 +102,9 @@ doDA <- function(sce_file, output, response, response_label){
 
 }
 
+
+#' runDA
+#' @export
 runDA <- function(output, response, response_label){
   doDA(file.path(output, "SEDA", "sce_CytoTree.rds"), output, response, response_label)
 }

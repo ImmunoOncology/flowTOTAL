@@ -248,7 +248,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   # Perform batch effect correction if specified
   if(batch & "batch" %in% colnames(sce_final@metadata)){
     # Apply batch effect correction using Harmony
-    assay(sce_final, "normexprs") <- t(harmony::HarmonyMatrix(data_mat = t(sce_final@assays@data$scaled),
+    sce_final@assays@data$normexprs <- t(harmony::HarmonyMatrix(data_mat = t(sce_final@assays@data$scaled),
                                                              meta_data = sce_final@metadata,
                                                              vars_use = c("batch"),
                                                              do_pca = F, plot_convergence = T,

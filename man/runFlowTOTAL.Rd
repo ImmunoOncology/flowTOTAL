@@ -12,7 +12,7 @@ runFlowTOTAL(
   log_file_track = NULL,
   cluster = NULL,
   metadata = NULL,
-  marker = NULL,
+  marker = FALSE,
   downsampling = "random",
   k_downsampling = 0.01,
   seed = 123,
