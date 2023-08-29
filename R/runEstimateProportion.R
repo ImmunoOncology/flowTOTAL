@@ -502,8 +502,6 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
     foreach(i = completed_files, .packages = c("flowCore")) %dopar% {
       process_file(i, output.dir, info_panel)
     }
-    # Stop the parallel backend
-    stopCluster(cl)
   } else {
     # Process files sequentially
     for (i in completed_files) {

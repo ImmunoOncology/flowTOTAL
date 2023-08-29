@@ -61,4 +61,7 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log
   } else {
     message("Step 3: runEstimateProportion - skipped")
   }
+
+  # Stop the parallel backend
+  stopCluster(cluster)
 }

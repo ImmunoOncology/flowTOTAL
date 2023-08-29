@@ -481,7 +481,6 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
     foreach(i = 1:nrow(metadata), .packages = c("flowCore")) %dopar% {
       process_file(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset)
     }
-    stopCluster(cl)
   } else {
     for(i in 1:nrow(metadata)){
       process_file(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset)
