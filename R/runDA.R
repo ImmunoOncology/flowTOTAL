@@ -6,14 +6,14 @@ doDA <- function(sce_file, output, response, response_label){
   sce <- readRDS(sce_file)
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID)/rowSums(table(sce@metadata$Cluster, sce@metadata$ID)))
   p1 <- ggpubr::ggviolin(dummy_df, x="Var1", y = "Freq", add = "jitter")
-  ggexport(filename = file.path(dir.ouput, "dummy_freq.pdf"), plotlist = list(p1), ncol = 1, nrow = 1)
+  ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_freq.pdf"), plotlist = list(p1), ncol = 1, nrow = 1)
 
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID))
 
   p2 <- ggpubr::ggviolin(dummy_df, x="Var1", y = "Freq", add = "jitter")
-  ggexport(filename = file.path(dir.ouput, response, "dummy_count.pdf"), plotlist = list(p2), ncol = 1, nrow = 1)
+  ggpubr::ggexport(filename = file.path(dir.ouput, response, "dummy_count.pdf"), plotlist = list(p2), ncol = 1, nrow = 1)
   p3 <- ggpubr::ggviolin(dummy_df[dummy_df$Freq>10, ], x="Var1", y = "Freq", add = "jitter")
-  ggexport(filename = file.path(dir.ouput, response, "dummy_count_nonzero.pdf"), plotlist = list(p3), ncol = 1, nrow = 1)
+  ggpubr::ggexport(filename = file.path(dir.ouput, response, "dummy_count_nonzero.pdf"), plotlist = list(p3), ncol = 1, nrow = 1)
 
   p_cluster <- plotClusters(sce,
                             clusterColname = 'Cluster',
@@ -69,11 +69,11 @@ doDA <- function(sce_file, output, response, response_label){
     stat.test.sig <- stat.test[stat.test$p<0.05, ]
 
     p_all <- ggpubr::ggviolin(dummy, x = "Response" , y = "Value", color = "Response", add = "jitter", palette = "jco", facet.by = "Cluster")+ggpubr::stat_compare_means()
-    ggexport(filename = file.path(dir.ouput, "p_all.pdf"), plotlist = list(p_all), ncol = 1, nrow = 1, height = 12, width =15)
+    ggpubr::ggexport(filename = file.path(dir.ouput, "p_all.pdf"), plotlist = list(p_all), ncol = 1, nrow = 1, height = 12, width =15)
 
     if(nrow(stat.test.sig)>0){
       p_stat <- ggpubr::ggviolin(dummy[dummy$Cluster%in%stat.test.sig$Cluster, ], x = "Response" , y = "Value", color = "Response", add = "jitter", palette = "jco", facet.by = "Cluster")+ggpubr::stat_compare_means()
-      ggexport(filename = file.path(dir.ouput, "p_stat_sig.pdf"), plotlist = list(p_stat), ncol = 1, nrow = 1, height = 8, width = 5*nrow(stat.test.sig))
+      ggpubr::ggexport(filename = file.path(dir.ouput, "p_stat_sig.pdf"), plotlist = list(p_stat), ncol = 1, nrow = 1, height = 8, width = 5*nrow(stat.test.sig))
     }
 
     p_marker <- markerExpressionPerCluster(sce,
