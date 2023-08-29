@@ -25,7 +25,7 @@ Imports:
   ggpubr, 
   openCyto (>= 2.10.1), 
   flowAI (>= 1.28.0),
-  PeacoQC (>= 1.8.0),
+  PeacoQC (>= 1.6.0),
   doParallel, 
   flowStats, 
   foreach, 
