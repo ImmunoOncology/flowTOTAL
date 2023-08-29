@@ -227,7 +227,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   }else if(downsampling%in%"minMaxSamplingSEACELLS"){
     if(!dir.exists(file.path(output, "tmp"))) dir.create(file.path(output, "tmp"))
     tmp_file <- file.path(output, "tmp", "scaled-counts.txt")
-    write.table(t(sce_final@assays@data), tmp_file, row.names = F, col.names = F, sep = "\t", quote = F)
+    write.table(t(sce_final@assays@data$scaled), tmp_file, row.names = F, col.names = F, sep = "\t", quote = F)
     idt_file <- run_min_max_sampling(file_counts = tmp_file, output = file.path(output, "tmp"), n_SEACells = floor(ncol(sce_final)*k_downsampling))
     idt <- as.numeric(read.delim(idt_file, header = F)[, 1])
   }else if(downsampling%in%"minMaxSampling"){
