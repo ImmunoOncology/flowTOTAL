@@ -11,6 +11,14 @@ runFlowTOTAL(
   panel_estimate,
   log_file_track = NULL,
   cluster = NULL,
+  metadata = NULL,
+  marker = NULL,
+  downsampling = "random",
+  k_downsampling = 0.01,
+  seed = 123,
+  batch = FALSE,
+  response = NULL,
+  response_label = NULL,
   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 )
 }
@@ -28,8 +36,20 @@ runEstimateProportion (default: NULL. It takes the one created during runDensity
 
 \item{cluster}{An optional cluster object for parallel processing (default: NULL).}
 
-\item{steps}{A character vector specifying the steps to run (default: runPreprocessing,
+\item{metadata}{Optional data frame containing additional metadata information.}
+
+\item{marker}{Whether to perform marker-specific analysis.}
+
+\item{downsampling}{The type of downsampling to perform ("random", "minMaxSamplingSEACELLS", "minMaxSampling", or none).}
+
+\item{k_downsampling}{Percentage of umber of cells to downsample for each ID.}
+
+\item{seed}{Seed for reproducibility if downsampling is used.}
+
+\item{batch}{Whether to perform batch effect correction.
 runDensityBackgating and runEstimateProportion).}
+
+\item{steps}{A character vector specifying the steps to run (default: runPreprocessing,}
 }
 \description{
 This function runs the complete flow analysis pipeline in sequential or parallel mode.

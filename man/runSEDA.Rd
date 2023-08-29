@@ -9,7 +9,7 @@ runSEDA(
   metadata = NULL,
   marker = FALSE,
   downsampling = "random",
-  k_downsampling = 1e+05,
+  k_downsampling = 0.01,
   seed = NULL,
   batch = FALSE
 )
