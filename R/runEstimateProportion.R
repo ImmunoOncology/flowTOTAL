@@ -497,7 +497,7 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
 
   # Process files in parallel if a cluster is provided
   if (!is.null(cluster)) {
-    requireNamespace(foreach)
+    requireNamespace('foreach')
     # Parallel processing using foreach
     foreach(i = completed_files, .packages = c("flowCore")) %dopar% {
       process_file(i, output.dir, info_panel)

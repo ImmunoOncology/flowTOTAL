@@ -235,7 +235,7 @@ runPreprocessing <- function(metadata, output, report = TRUE, cluster = NULL, lo
       preprocess_function(metadata$filename[i])
     }
   } else {
-    requireNamespace(foreach)
+    requireNamespace('foreach')
     foreach(i = 1:nrow(metadata), .combine = 'c') %dopar% {
       preprocess_function(metadata$filename[i])
     }
