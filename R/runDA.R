@@ -1,7 +1,8 @@
 
 doDA <- function(sce_file, output, response, response_label){
 
-  if(!dir.exists(file.path(output, "DA"))) dir.create(file.path(output, "DA"))
+  dir.ouput <- file.path(output, "DA")
+  if(!dir.exists(dir.ouput)) dir.create(dir.ouput)
 
   sce <- readRDS(sce_file)
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID)/rowSums(table(sce@metadata$Cluster, sce@metadata$ID)))

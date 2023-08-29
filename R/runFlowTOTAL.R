@@ -36,7 +36,7 @@
 #' )
 #'
 runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log_file_track=NULL, cluster = NULL,
-                         metadata=NULL, marker=NULL, downsampling="random", k_downsampling=0.01, seed=123, batch=FALSE,
+                         metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=0.01, seed=123, batch=FALSE,
                          response=NULL, response_label=NULL,
                          steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")) {
 
