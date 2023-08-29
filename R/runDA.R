@@ -14,9 +14,9 @@ doDA <- function(sce_file, output, response, response_label){
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID))
 
   p2 <- ggpubr::ggviolin(dummy_df, x="Var1", y = "Freq", add = "jitter")
-  ggpubr::ggexport(filename = file.path(dir.ouput, response, "dummy_count.pdf"), plotlist = list(p2), ncol = 1, nrow = 1)
+  ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_count.pdf"), plotlist = list(p2), ncol = 1, nrow = 1)
   p3 <- ggpubr::ggviolin(dummy_df[dummy_df$Freq>10, ], x="Var1", y = "Freq", add = "jitter")
-  ggpubr::ggexport(filename = file.path(dir.ouput, response, "dummy_count_nonzero.pdf"), plotlist = list(p3), ncol = 1, nrow = 1)
+  ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_count_nonzero.pdf"), plotlist = list(p3), ncol = 1, nrow = 1)
 
   p_cluster <- plotClusters(sce,
                             clusterColname = 'Cluster',
@@ -29,7 +29,7 @@ doDA <- function(sce_file, output, response, response_label){
                             subtitleLabSize = 16,
                             captionLabSize = 16)
 
-  ggsave(plot = p_cluster, filename = file.path(dir.ouput, "p_cluster.pdf"), device = "pdf", height = 7, width = 7)
+  ggplot2::ggsave(plot = p_cluster, filename = file.path(dir.ouput, "p_cluster.pdf"), device = "pdf", height = 7, width = 7)
 
   if("Marker"%in%colnames(sce@metadata)){
     p_celltype <- plotClusters(sce,
@@ -43,7 +43,7 @@ doDA <- function(sce_file, output, response, response_label){
                                titleLabSize = 20,
                                subtitleLabSize = 16,
                                captionLabSize = 16)
-    ggsave(plot = p_celltype, filename = file.path(dir.ouput, "p_Marker.pdf"), device = "pdf", height = 7, width = 7)
+    ggplot2::ggsave(plot = p_celltype, filename = file.path(dir.ouput, "p_Marker.pdf"), device = "pdf", height = 7, width = 7)
 
   }
 
@@ -92,7 +92,7 @@ doDA <- function(sce_file, output, response, response_label){
                                            captionLabSize = 18)
 
     write.table(stat.test, file.path(dir.ouput, "stat_test.txt"), col.names = T, row.names = F, sep = "\t", quote = F)
-    ggsave(plot = p_marker, filename = file.path(dir.ouput, "p_marker.pdf"), device = "pdf", height = 12, width = 15)
+    ggplot2::ggsave(plot = p_marker, filename = file.path(dir.ouput, "p_marker.pdf"), device = "pdf", height = 12, width = 15)
 
   }else{
     stat.test <- NA
