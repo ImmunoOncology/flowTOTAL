@@ -28,6 +28,8 @@ devtools::install_github("giannimonaco/flowAI")
 devtools::install_github("saeyslab/PeacoQC")
 devtools::install_github("immunogenomics/harmony")
 devtools::install_github("kevinblighe/scDataviz")
+devtools::install_github("jspidlen/flowUtils")
+devtools::install_github("JhuangLab/CytoTree")
 
 remotes::install_github(repo = "ImmunoOncology/flowTOTAL", ref = "dev-1.0.0")
 

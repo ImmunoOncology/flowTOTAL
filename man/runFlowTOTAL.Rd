@@ -19,7 +19,7 @@ runFlowTOTAL(
 
 \item{output}{The output directory for results.}
 
-\item{panel_backgating}{The panel for density-based backgating. File path.}
+\item{panel_backgating}{The channel for density-based backgating. Vector of channel names and signs specifying the gating operations.}
 
 \item{panel_estimate}{The panel for proportion estimation. File path.}
 
@@ -42,8 +42,8 @@ library(flowTOTAL)
 runFlowTOTAL(
   fcs_path = "path/to/fcs_files",
   output = "output_directory",
-  panel_backgating = "panel_backgating.csv",
-  panel_estimate = "panel_estimate.csv",
+  panel_backgating = "CD3+",
+  panel_estimate = "panel_estimate.txt",
   cluster = my_cluster_object,
   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 )

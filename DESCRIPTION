@@ -31,6 +31,10 @@ Imports:
   foreach, 
   ggplotify,
   ks, 
-  sp
+  sp, 
+  harmony,
+  scDataviz,
+  CytoTree,
+  reticulate
 Depends: 
     R (>= 2.10)

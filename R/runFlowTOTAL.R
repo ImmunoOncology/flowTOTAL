@@ -62,4 +62,19 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log
     message("Step 3: runEstimateProportion - skipped")
   }
 
+  # Step 4: Single Event Downstream Analyses
+  if ("runSEDA" %in% steps) {
+    message("Step 4: runSEDA")
+    runSEDA(output, metadata=NULL, marker=TRUE, downsampling="random", k_downsampling=0.001, seed=123, batch=FALSE)
+  } else {
+    message("Step 4: runSEDA - skipped")
+  }
+
+  # Step 5: Differential Abundance Analyses
+  if ("runDA" %in% steps) {
+    message("Step 5: runDA")
+    runDA(output, response=NULL, response_label=NULL)
+  } else {
+    message("Step 5: runDA - skipped")
+  }
 }
