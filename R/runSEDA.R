@@ -176,7 +176,7 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
 #'
 #' @import scDataviz
 #'
-runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=100000, seed=NULL, batch=FALSE){
+runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=0.01, seed=NULL, batch=FALSE){
 
   if(!is.null(seed)) set.seed(seed)
 

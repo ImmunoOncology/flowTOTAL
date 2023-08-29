@@ -11,6 +11,12 @@
 #' runEstimateProportion (default: NULL. It takes the one created during runDensityBackgating in output/log_file_track.txt)
 #' @param cluster An optional cluster object for parallel processing (default: NULL).
 #' @param steps A character vector specifying the steps to run (default: runPreprocessing,
+#' @param metadata Optional data frame containing additional metadata information.
+#' @param marker Whether to perform marker-specific analysis.
+#' @param downsampling The type of downsampling to perform ("random", "minMaxSamplingSEACELLS", "minMaxSampling", or none).
+#' @param k_downsampling Percentage of umber of cells to downsample for each ID.
+#' @param seed Seed for reproducibility if downsampling is used.
+#' @param batch Whether to perform batch effect correction.
 #' runDensityBackgating and runEstimateProportion).
 #'
 #' @keywords flowCore
@@ -30,6 +36,8 @@
 #' )
 #'
 runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log_file_track=NULL, cluster = NULL,
+                         metadata=NULL, marker=NULL, downsampling="random", k_downsampling=0.01, seed=123, batch=FALSE,
+                         response=NULL, response_label=NULL,
                          steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")) {
 
   # Create a metadata data frame to store file information
@@ -65,7 +73,7 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log
   # Step 4: Single Event Downstream Analyses
   if ("runSEDA" %in% steps) {
     message("Step 4: runSEDA")
-    runSEDA(output, metadata=NULL, marker=TRUE, downsampling="random", k_downsampling=0.001, seed=123, batch=FALSE)
+    runSEDA(output, metadata=metadata, marker=marker, downsampling=downsampling, k_downsampling=k_downsampling, seed=seed, batch=batch)
   } else {
     message("Step 4: runSEDA - skipped")
   }
@@ -73,7 +81,7 @@ runFlowTOTAL <- function(fcs_path, output, panel_backgating, panel_estimate, log
   # Step 5: Differential Abundance Analyses
   if ("runDA" %in% steps) {
     message("Step 5: runDA")
-    runDA(output, response=NULL, response_label=NULL)
+    runDA(output, response=response, response_label=response_label)
   } else {
     message("Step 5: runDA - skipped")
   }
