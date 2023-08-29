@@ -486,8 +486,13 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
 
   # Helper function to process a single file
   process_file <- function(filename, output.dir, info_panel) {
-    id <- gsub(".fcs$", "", basename(filename))
-    doEstimateProportion(filename = filename, id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+    tryCatch({
+      id <- gsub(".fcs$", "", basename(filename))
+      doEstimateProportion(filename = filename, id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+    },
+    error=function(e) {
+      log_file_error_traditional(paste("File: ", filename, "\n", e))
+    })
   }
 
   # Process files in parallel if a cluster is provided
