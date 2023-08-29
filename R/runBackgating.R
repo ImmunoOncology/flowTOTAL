@@ -373,7 +373,7 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   }
 
   # Create a final density plot of the selected events
-  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100) +
+  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100)
 
 
   # Arrange plots and save as PDF
