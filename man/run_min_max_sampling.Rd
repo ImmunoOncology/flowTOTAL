@@ -10,21 +10,40 @@ run_min_max_sampling(
   n_SEACells,
   n_waypoint_eigs = 5,
   n_comps_pca = 10,
-  build_kernel_on = "X_umap"
+  build_kernel_on = "X_umap",
+  conda_env = NULL
 )
 }
 \arguments{
-\item{file_counts}{File with raw counts}
+\item{file_counts}{Path to the file containing counts data.}
 
-\item{n_SEACells}{Number of cells to keep}
+\item{output}{Directory where the output files will be saved.}
 
-\item{n_components}{Number of components}
+\item{n_SEACells}{Number of SEACells.}
 
-\item{...}{Other arguments passed to the Python function}
+\item{n_waypoint_eigs}{Number of waypoint eigenvectors (default is 5).}
+
+\item{n_comps_pca}{Number of PCA components (default is 10).}
+
+\item{build_kernel_on}{Build kernel on which data (default is "X_umap").}
+
+\item{conda_env}{Conda environment to use for running SEACells.}
 }
 \value{
-Path to the file with the selected cell
+Path to the file containing the indices used for min-max sampling.
 }
 \description{
-Run MinMax-Sampling using SEACells
+This function performs min-max sampling using SEACells or falls back to a basic sampling method if there's an error with the conda environment.
+}
+\examples{
+run_min_max_sampling(
+  file_counts = "counts.txt",
+  output = "output_folder",
+  n_SEACells = 100,
+  n_waypoint_eigs = 5,
+  n_comps_pca = 10,
+  build_kernel_on = "X_umap",
+  conda_env = "my_env"
+)
+
 }

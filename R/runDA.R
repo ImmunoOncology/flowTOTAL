@@ -1,23 +1,39 @@
 
-#' doDA
+#' Run Differential Abundance Analysis
+#'
+#' This function performs differential analysis and generates various plots based on the provided single-cell experiment data.
+#'
+#' @param sce_file Path to the SingleCellExperiment (SCE) object file.
+#' @param output Directory where the output files will be saved.
+#' @param response Column name in the metadata indicating the response variable.
+#' @param response_label Labels for the response variable levels.
+#'
+#' @return A data frame containing results of statistical tests or NA if the response variable is missing.
+#'
+#' @import ggpubr
+#' @import ggplot2
+#' @import reshape2
+#' @import rstatix
 #' @export
 doDA <- function(sce_file, output, response, response_label){
 
   dir.ouput <- file.path(output, "DA")
   if(!dir.exists(dir.ouput)) dir.create(dir.ouput)
-
   sce <- readRDS(sce_file)
+
+  # Generate dummy frequency violin plot
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID)/rowSums(table(sce@metadata$Cluster, sce@metadata$ID)))
   p1 <- ggpubr::ggviolin(dummy_df, x="Var1", y = "Freq", add = "jitter")
   ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_freq.pdf"), plotlist = list(p1), ncol = 1, nrow = 1)
 
+  # Generate dummy count violin plots
   dummy_df <- as.data.frame(table(sce@metadata$Cluster, sce@metadata$ID))
-
   p2 <- ggpubr::ggviolin(dummy_df, x="Var1", y = "Freq", add = "jitter")
   ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_count.pdf"), plotlist = list(p2), ncol = 1, nrow = 1)
   p3 <- ggpubr::ggviolin(dummy_df[dummy_df$Freq>10, ], x="Var1", y = "Freq", add = "jitter")
   ggpubr::ggexport(filename = file.path(dir.ouput, "dummy_count_nonzero.pdf"), plotlist = list(p3), ncol = 1, nrow = 1)
 
+  # Generate cluster plot
   p_cluster <- plotClusters(sce,
                             clusterColname = 'Cluster',
                             labSize = 7.0,
@@ -30,6 +46,7 @@ doDA <- function(sce_file, output, response, response_label){
                             captionLabSize = 16)
 
   ggplot2::ggsave(plot = p_cluster, filename = file.path(dir.ouput, "p_cluster.pdf"), device = "pdf", height = 7, width = 7)
+
 
   if("Marker"%in%colnames(sce@metadata)){
     p_celltype <- plotClusters(sce,
@@ -47,7 +64,7 @@ doDA <- function(sce_file, output, response, response_label){
 
   }
 
-
+  # Generate response-based plots if response variable is present
   if(response%in%colnames(sce@metadata)){
 
     idt_response <- sce@metadata[, response]%in%response_label
@@ -103,7 +120,16 @@ doDA <- function(sce_file, output, response, response_label){
 }
 
 
-#' runDA
+#' Run Differential Analysis from Preprocessed Data
+#'
+#' This function runs the differential analysis process using a preprocessed SingleCellExperiment (SCE) object and generates various plots based on the provided information.
+#'
+#' @param output Directory where the output files will be saved.
+#' @param response Column name in the metadata indicating the response variable.
+#' @param response_label Labels for the response variable levels.
+#'
+#' @return A data frame containing results of statistical tests or NA if the response variable is missing.
+#'
 #' @export
 runDA <- function(output, response, response_label){
   doDA(file.path(output, "SEDA", "sce_CytoTree.rds"), output, response, response_label)

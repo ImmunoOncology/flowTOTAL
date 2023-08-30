@@ -173,10 +173,12 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
 #' @param k_downsampling Percentage of umber of cells to downsample for each ID.
 #' @param seed Seed for reproducibility if downsampling is used.
 #' @param batch Whether to perform batch effect correction.
+#' @param conda_env Conda environment to use for running SEACells.
 #'
 #' @import scDataviz
 #'
-runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=0.01, seed=NULL, batch=FALSE){
+#' @export
+runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=0.01, seed=NULL, batch=FALSE, conda_env=NULL){
 
   if(!is.null(seed)) set.seed(seed)
 
@@ -221,6 +223,11 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   sce_final <- sce_final[, idt]
   sce_final@metadata <- sce_final@metadata[idt, ]
 
+  if(is.null(conda_env)){
+    message("NULL in conda env. Then change to minMaxSampling.")
+    downsampling <- "minMaxSampling"
+  }
+
   # Perform specified downsampling method
   if(downsampling%in%"random"){
     idt <- unlist(lapply(unique(sce_final@metadata$ID), function(x) sample(which(sce_final@metadata$ID%in%x), length(which(sce_final@metadata$ID%in%x))*k_downsampling)))
@@ -228,7 +235,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
     if(!dir.exists(file.path(output, "tmp"))) dir.create(file.path(output, "tmp"))
     tmp_file <- file.path(output, "tmp", "scaled-counts.txt")
     write.table(t(sce_final@assays@data$scaled), tmp_file, row.names = F, col.names = F, sep = "\t", quote = F)
-    idt_file <- run_min_max_sampling(file_counts = tmp_file, output = file.path(output, "tmp"), n_SEACells = floor(ncol(sce_final)*k_downsampling))
+    idt_file <- run_min_max_sampling(file_counts = tmp_file, output = file.path(output, "tmp"), n_SEACells = floor(ncol(sce_final)*k_downsampling), conda_env=conda_env)
     idt <- as.numeric(read.delim(idt_file, header = F)[, 1])
   }else if(downsampling%in%"minMaxSampling"){
     idt <- unlist(lapply(unique(sce_final@metadata$ID), function(x) downsampling_with_outliers(t(sce_final@assays@data$scaled)[which(sce_final@metadata$ID%in%x), ], floor(length(which(sce_final@metadata$ID%in%x))*k_downsampling))))

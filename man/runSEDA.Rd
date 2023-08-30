@@ -11,7 +11,8 @@ runSEDA(
   downsampling = "random",
   k_downsampling = 0.01,
   seed = NULL,
-  batch = FALSE
+  batch = FALSE,
+  conda_env = NULL
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ runSEDA(
 \item{seed}{Seed for reproducibility if downsampling is used.}
 
 \item{batch}{Whether to perform batch effect correction.}
+
+\item{conda_env}{Conda environment to use for running SEACells.}
 }
 \description{
 This function performs the SEDA analysis on FCS data, including optional marker-specific analysis and downsampling.

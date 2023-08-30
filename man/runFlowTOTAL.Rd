@@ -19,6 +19,7 @@ runFlowTOTAL(
   batch = FALSE,
   response = NULL,
   response_label = NULL,
+  conda_env = NULL,
   steps = c("runPreprocessing", "runDensityBackgating", "runEstimateProportion")
 )
 }
@@ -38,18 +39,24 @@ runEstimateProportion (default: NULL. It takes the one created during runDensity
 
 \item{metadata}{Optional data frame containing additional metadata information.}
 
-\item{marker}{Whether to perform marker-specific analysis.}
+\item{marker}{Whether to perform marker-specific analysis (see runSEDA fn).}
 
-\item{downsampling}{The type of downsampling to perform ("random", "minMaxSamplingSEACELLS", "minMaxSampling", or none).}
+\item{downsampling}{The type of downsampling to perform ("random", "minMaxSamplingSEACELLS", "minMaxSampling", or none) (see runSEDA fn).}
 
-\item{k_downsampling}{Percentage of umber of cells to downsample for each ID.}
+\item{k_downsampling}{Percentage of umber of cells to downsample for each ID (see runSEDA fn).}
 
 \item{seed}{Seed for reproducibility if downsampling is used.}
 
-\item{batch}{Whether to perform batch effect correction.
-runDensityBackgating and runEstimateProportion).}
+\item{batch}{Whether to perform batch effect correction (see runSEDA fn).}
 
-\item{steps}{A character vector specifying the steps to run (default: runPreprocessing,}
+\item{response}{Column name in the metadata indicating the response variable (see runDA fn).}
+
+\item{response_label}{Labels for the response variable levels (see runDA fn).}
+
+\item{conda_env}{Conda environment to use for running SEACells.}
+
+\item{steps}{A character vector specifying the steps to run (default: runPreprocessing,
+runDensityBackgating, runEstimateProportion, runSEDA, runDA).}
 }
 \description{
 This function runs the complete flow analysis pipeline in sequential or parallel mode.
