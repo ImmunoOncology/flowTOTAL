@@ -373,7 +373,7 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
   }
 
   # Create a final density plot of the selected events
-  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100) +
+  p_final <- ggcyto::autoplot(ff.raw[idt_final, ], panel_channel[1], panel_channel[2], bins = 100)
 
 
   # Arrange plots and save as PDF
@@ -477,11 +477,10 @@ runDensityBackgating <- function(metadata, output, chnl = c("FSC-A", "SSC-A"), c
 
   # Set up parallel processing
   if(!is.null(cluster)){
-    requireNamespace(foreach)
+    requireNamespace('foreach')
     foreach(i = 1:nrow(metadata), .packages = c("flowCore")) %dopar% {
       process_file(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset)
     }
-    stopCluster(cl)
   } else {
     for(i in 1:nrow(metadata)){
       process_file(metadata, i, output.dir, channel_bg, logicle_chnls, sd.max_it, min.pct_it, target.fsc, target.ssc, min.ff_subset)

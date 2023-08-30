@@ -24,13 +24,19 @@ Imports:
   ggcyto (>= 1.26.4),
   ggpubr, 
   openCyto (>= 2.10.1), 
-  flowAI (>= 1.28.0),
-  PeacoQC (>= 1.8.0),
+  flowAI (>= 1.27.3),
+  PeacoQC (>= 1.6.0),
   doParallel, 
   flowStats, 
   foreach, 
   ggplotify,
   ks, 
-  sp
+  sp, 
+  harmony,
+  scDataviz,
+  CytoTree,
+  reticulate,
+  reshape2,
+  rstatix
 Depends: 
     R (>= 2.10)
