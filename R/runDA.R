@@ -64,8 +64,10 @@ doDA <- function(sce_file, output, response, response_label){
 
   }
 
-  # Generate response-based plots if response variable is present
-  if(response%in%colnames(sce@metadata)){
+  if(is.null(response) | is.null(response_label)){
+    stat.test <- NA
+  }else if(response%in%colnames(sce@metadata)){
+    # Generate response-based plots if response variable is present
 
     idt_response <- sce@metadata[, response]%in%response_label
     sce_response <- sce[, idt_response]
