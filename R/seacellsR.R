@@ -31,8 +31,11 @@ run_min_max_sampling <- function(file_counts, output, n_SEACells, n_waypoint_eig
       system.file("python", "seacells_wrapper.py", package = "flowTOTAL"),
       output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on
     )
+    message("Using ", conda_env)
     reticulate::use_condaenv(condaenv = conda_env, required = TRUE)
+    message("Running ", code_args)
     reticulate::py_run_file(code_args)
+    message("Finished.")
   },
   error=function(e) {
     message("Error when using conda env. Instead using minMaxSampling.")
