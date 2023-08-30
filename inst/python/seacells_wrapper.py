@@ -16,11 +16,17 @@ def run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eig
   counts = csr_matrix(csr_matrix(np.loadtxt(file_counts), dtype=np.float32), dtype=np.float32)
   ad = ann.AnnData(counts)
 
+  n_comps_pca = min(counts.shape[1]-1, n_comps_pca)
+
   sc.pp.normalize_per_cell(ad)
-  sc.pp.log1p(ad)
+  #sc.pp.log1p(ad)
   sc.pp.neighbors(ad)
-  sc.tl.umap(ad)
-  sc.tl.pca(ad, n_comps=n_comps_pca, use_highly_variable=False)
+
+  if build_kernel_on == 'X_umap':
+    sc.tl.umap(ad)
+  
+  if build_kernel_on == 'X_pca':
+    sc.tl.pca(ad, n_comps=n_comps_pca, use_highly_variable=False)
 
   from SEACells.core import SEACells
   model = SEACells(ad, build_kernel_on=build_kernel_on, n_SEACells=n_SEACells, n_waypoint_eigs=n_waypoint_eigs,convergence_epsilon = 1e-5)
@@ -39,9 +45,9 @@ def run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eig
 
 file_counts = sys.argv[1]
 output = sys.argv[2]
-n_SEACells = sys.argv[3]
-n_waypoint_eigs = sys.argv[4]
-n_comps_pca = sys.argv[5]
+n_SEACells = int(sys.argv[3])
+n_waypoint_eigs = int(sys.argv[4])
+n_comps_pca = int(sys.argv[5])
 build_kernel_on = sys.argv[6]
 
 run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on)

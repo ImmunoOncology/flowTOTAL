@@ -7,7 +7,7 @@
 #' @param n_SEACells Number of SEACells.
 #' @param n_waypoint_eigs Number of waypoint eigenvectors (default is 5).
 #' @param n_comps_pca Number of PCA components (default is 10).
-#' @param build_kernel_on Build kernel on which data (default is "X_umap").
+#' @param build_kernel_on Build kernel on which data (default is "X_pca").
 #' @param conda_env Conda environment to use for running SEACells.
 #'
 #' @return Path to the file containing the indices used for min-max sampling.
@@ -19,13 +19,13 @@
 #'   n_SEACells = 100,
 #'   n_waypoint_eigs = 5,
 #'   n_comps_pca = 10,
-#'   build_kernel_on = "X_umap",
+#'   build_kernel_on = "X_pca",
 #'   conda_env = "my_env"
 #' )
 #'
 #' @import reticulate
 #'
-run_min_max_sampling <- function(file_counts, output, n_SEACells, n_waypoint_eigs=5, n_comps_pca=10, build_kernel_on="X_umap", conda_env=NULL) {
+run_min_max_sampling <- function(file_counts, output, n_SEACells, n_waypoint_eigs=5, n_comps_pca=10, build_kernel_on="X_pca", conda_env=NULL) {
   tryCatch({
     code_args <- paste(
       system.file("python", "seacells_wrapper.py", package = "flowTOTAL"),
