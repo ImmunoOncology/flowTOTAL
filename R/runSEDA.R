@@ -157,7 +157,7 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
   sampled_indices <- c(sampled_non_outlier_indices, names(outlier_cells))
 
 
-  return(which(sampled_indices%in%rownames(expression_matrix)))
+  return(which(rownames(expression_matrix)%in%sampled_indices))
 }
 
 
