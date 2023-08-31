@@ -149,11 +149,12 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
 
   # Order non-outlier cells based on some measure (e.g., mean)
   non_outlier_means <- rowMeans(expression_matrix[setdiff(1:nrow(expression_matrix), outlier_cells), ])
+  non_outlier_means <- non_outlier_means[!names(non_outlier_means)%in%names(outlier_cells)]
   sorted_non_outlier_indices <- order(non_outlier_means)
 
   # Select sampled non-outlier cell indices
-  sampled_non_outlier_indices <- sorted_non_outlier_indices[1:non_outlier_target]
-  sampled_indices <- c(sampled_non_outlier_indices, outlier_cells)
+  sampled_non_outlier_indices <- names(sorted_non_outlier_indices)[1:non_outlier_target]
+  sampled_indices <- c(sampled_non_outlier_indices, names(outlier_cells))
 
 
   return(rownames(expression_matrix)[sampled_indices])
