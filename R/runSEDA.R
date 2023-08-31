@@ -185,10 +185,18 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   # Get a list of cleaned FCS file paths
   fcs_clean <- list.files(file.path(output, "fcs_clean"), full.names = T)
 
-  # Perform SEDA analysis on cleaned FCS files
-  sce_clean <- doSEDA(fcs_path = fcs_clean)
+  # Check if exists
+  if(file.exists(file.path(output, "SEDA", "sce_clean.rds"))){
+    sce_clean <- readRDS(fcs_path = file.path(output, "SEDA", "sce_clean.rds"))
+  }else{
+    # Perform SEDA analysis on cleaned FCS files
+    sce_clean <- doSEDA(fcs_path = fcs_clean)
+    saveRDS(sce_clean, file.path(output, "SEDA", "sce_clean.rds"))
+  }
 
-  if(marker){
+  if(file.exists(file.path(output, "SEDA", "sce_final.rds"))){
+    sce_final <- readRDS(fcs_path = file.path(output, "SEDA", "sce_final.rds"))
+  }else if(marker){
     sce_clean@metadata$Marker <- "ND"
 
     # Extract marker-specific analysis results
@@ -217,6 +225,8 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
     sce_final <- sce_clean
     rm(sce_clean)
   }
+
+  saveRDS(sce_final, file.path(output, "SEDA", "sce_final.rds"))
 
   # Remove non-informative genes and cells
   idt <- !apply(is.na(sce_final@assays@data$scaled), 2, any)
