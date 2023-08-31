@@ -187,7 +187,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
 
   # Check if exists
   if(file.exists(file.path(output, "SEDA", "sce_clean.rds"))){
-    sce_clean <- readRDS(fcs_path = file.path(output, "SEDA", "sce_clean.rds"))
+    sce_clean <- readRDS(file.path(output, "SEDA", "sce_clean.rds"))
   }else{
     # Perform SEDA analysis on cleaned FCS files
     sce_clean <- doSEDA(fcs_path = fcs_clean)
@@ -195,7 +195,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   }
 
   if(file.exists(file.path(output, "SEDA", "sce_final.rds"))){
-    sce_final <- readRDS(fcs_path = file.path(output, "SEDA", "sce_final.rds"))
+    sce_final <- readRDS(file.path(output, "SEDA", "sce_final.rds"))
   }else if(marker){
     sce_clean@metadata$Marker <- "ND"
 
