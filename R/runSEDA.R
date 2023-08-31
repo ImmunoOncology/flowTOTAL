@@ -235,8 +235,8 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
   sce_final@metadata <- sce_final@metadata[idt, ]
 
   if(is.null(conda_env)){
-    message("NULL in conda env. Then change to minMaxSampling.")
-    downsampling <- "minMaxSampling"
+    message("NULL in conda env. Then change to random.")
+    downsampling <- "random"
   }
 
   # Perform specified downsampling method

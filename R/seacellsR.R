@@ -38,8 +38,8 @@ run_min_max_sampling <- function(file_counts, output, n_SEACells, n_waypoint_eig
     message("Finished.")
   },
   error=function(e) {
-    message("Error when using conda env. Instead using minMaxSampling.")
-    #idt <- downsampling_with_outliers(t(sce_final@assays@data$scaled), n_SEACells)
+    message("Error when using conda env. Instead using random.")
+    message(e)
     n_row <- nrow(read.delim(file_counts, header = F))
     idt <- sample(1:n_row, n_SEACells)
     write.table(idt, file.path(output, "min-max-sampling-index.txt"), col.names = F, row.names = F, sep = "\t", quote = F)
