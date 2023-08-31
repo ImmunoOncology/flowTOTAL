@@ -157,7 +157,7 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
   sampled_indices <- c(sampled_non_outlier_indices, names(outlier_cells))
 
 
-  return(which(rownames(expression_matrix)%in%sampled_indices))
+  return(sampled_indices)
 }
 
 
@@ -250,6 +250,7 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
     idt <- as.numeric(read.delim(idt_file, header = F)[, 1])
   }else if(downsampling%in%"minMaxSampling"){
     idt <- unlist(lapply(unique(sce_final@metadata$ID), function(x) downsampling_with_outliers(t(sce_final@assays@data$scaled)[which(sce_final@metadata$ID%in%x), ], floor(length(which(sce_final@metadata$ID%in%x))*k_downsampling))))
+    idt <- which(colnames(sce_final)%in%idt)
   }else{
     idt <- 1:nrow(ncol(sce_final))
   }
