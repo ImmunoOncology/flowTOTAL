@@ -182,6 +182,7 @@ downsampling_with_outliers <- function(expression_matrix, target_cells) {
 runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", k_downsampling=0.01, seed=NULL, batch=FALSE, conda_env=NULL){
 
   if(!is.null(seed)) set.seed(seed)
+  if(!dir.exists(file.path(output, "SEDA"))) dir.create(file.path(output, "SEDA"))
 
   # Get a list of cleaned FCS file paths
   fcs_clean <- list.files(file.path(output, "fcs_clean"), full.names = T)
@@ -305,7 +306,6 @@ runSEDA <- function(output, metadata=NULL, marker=FALSE, downsampling="random", 
     }
   }
 
-  if(!dir.exists(file.path(output, "SEDA"))) dir.create(file.path(output, "SEDA"))
   saveRDS(sce_final, file.path(output, "SEDA", "sce_CytoTree.rds"))
 }
 
