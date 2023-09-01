@@ -27,14 +27,22 @@
 #'
 run_min_max_sampling <- function(file_counts, output, n_SEACells, n_waypoint_eigs=5, n_comps_pca=10, build_kernel_on="X_pca", conda_env=NULL) {
   tryCatch({
-    code_args <- paste(
-      system.file("python", "seacells_wrapper.py", package = "flowTOTAL"),
-      file_counts, output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on
-    )
     message("Using ", conda_env)
     reticulate::use_condaenv(condaenv = conda_env, required = TRUE)
-    message("Running ", code_args)
-    reticulate::py_run_file(code_args)
+
+    python_file <- system.file("python", "seacells_wrapper.py", package = "flowTOTAL")
+    message("Running ", python_file)
+    reticulate::source_python(python_file)
+
+    file_counts <- file_counts
+    output <- output
+    n_SEACells <- n_SEACells
+    n_waypoint_eigs <- n_waypoint_eigs
+    n_comps_pca <- n_comps_pca
+    build_kernel_on <- build_kernel_on
+
+    run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on)
+
     message("Finished.")
   },
   error=function(e) {

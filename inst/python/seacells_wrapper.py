@@ -43,11 +43,10 @@ def run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eig
   return model.archetypes
 
 
-file_counts = sys.argv[1]
-output = sys.argv[2]
-n_SEACells = int(sys.argv[3])
-n_waypoint_eigs = int(sys.argv[4])
-n_comps_pca = int(sys.argv[5])
-build_kernel_on = sys.argv[6]
-
-run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on)
+# file_counts = sys.argv[1]
+# output = sys.argv[2]
+# n_SEACells = int(sys.argv[3])
+# n_waypoint_eigs = int(sys.argv[4])
+# n_comps_pca = int(sys.argv[5])
+# build_kernel_on = sys.argv[6]
+# run_min_max_sampling_wrapper(file_counts, output, n_SEACells, n_waypoint_eigs, n_comps_pca, build_kernel_on)
