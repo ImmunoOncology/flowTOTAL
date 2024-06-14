@@ -103,3 +103,11 @@ runFlowTOTAL(
 ## Version 
 
 1.0.2
+
+Version ggplot2: 3.4.3
+
+```{R}
+
+install.packages("https://cran.r-project.org/src/contrib/Archive/ggplot2/ggplot2_3.4.3.tar.gz", repos = NULL, type = "source")
+
+```
