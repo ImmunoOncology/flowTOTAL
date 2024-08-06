@@ -443,6 +443,349 @@ doEstimateProportion <- function(filename, id = NULL, output.dir, info_panel, cu
   )
 }
 
+
+doEstimateProportion2 <- function (filename, id = NULL, output.dir, info_panel, cutpoint_min = 1,
+                                   cutpoint_max = 5e+05) {
+  if (is.null(id))
+    id <- filename
+  ff.raw <- flowCore::read.FCS(filename)
+  n.total <- nrow(ff.raw)
+  df_traditional <- data.frame(File = filename, ID = id)
+  df_traditional$N.total <- n.total
+  df_traditional[, info_panel$Label] <- NA
+  plot_traditional <- list()
+  for (i in 1:nrow(info_panel)) {
+    pattern_list <- info_panel$Pattern[i]
+    label <- info_panel$Label[i]
+    pattern_list <- unlist(strsplit(pattern_list, "[.]"))
+    pattern_list <- sapply(pattern_list, strsplit, "[;:]")
+    prev_gate <- NULL
+    if(any(grepl(":", names(pattern_list)))){
+      prev_gate <- names(pattern_list)[which(grepl(":", names(pattern_list)))-1]
+    }
+    plot_list <- list()
+    ff <- ff.raw
+    for (pattern in pattern_list) {
+      pattern_name <- names(which(sapply(pattern_list, function(x) all(pattern%in%x))))
+      channel_sign <- sapply(pattern, function(x) substring(x,
+                                                            nchar(x), nchar(x)))
+      channel <- sapply(pattern, function(x) substring(x,
+                                                       1, nchar(x) - 1))
+      beggining <- sapply(channel, function(x) substring(x,
+                                                         nchar(x), nchar(x)) == "^")
+      ending <- sapply(channel, function(x) substring(x,
+                                                      nchar(x), nchar(x)) == "$")
+      channel[beggining] <- sapply(channel[beggining],
+                                   function(x) substr(x, 1, nchar(x) - 1))
+      channel[ending] <- sapply(channel[ending], function(x) substr(x,
+                                                                    1, nchar(x) - 1))
+      channel_sign[beggining] <- paste0("^", channel_sign[beggining])
+      channel_sign[ending] <- paste0("$", channel_sign[ending])
+      names(channel) <- channel
+      names(channel_sign) <- names(channel)
+      if (all(!names(channel) %in% ff@parameters@data$desc)) {
+        message("Error --> ", id)
+        return(0)
+      }
+      channel <- ff@parameters@data$name[match(names(channel),
+                                               ff@parameters@data$desc)]
+      names(channel) <- names(channel_sign)
+      channel <- paste0(channel, channel_sign)
+      if(grepl(":", pattern_name)){
+        res_gate <- apply_gate_cuadrant(ff = ff, channel = channel, channel_sign = channel_sign, main=label, prev_gate=prev_gate)
+        plot_gate <- TRUE
+      }else{
+        res_gate <- apply_gate(ff, channel, cutpoint_min = cutpoint_min,
+                               cutpoint_max = cutpoint_max, return_plot = FALSE,
+                               join = FALSE, traditional = TRUE)
+        plot_gate <- FALSE
+      }
+
+      idt_bg <- res_gate$idt
+      gate_bg <- res_gate$gate_bg
+      channel_bg <- res_gate$channel
+      if (length(gate_bg) == 0)
+        gate_bg <- NULL
+      if(!plot_gate){
+        plot_gate <- do_ggcyto(ff,
+                               channel_bg, gate_bg, logicle_chnls = channel_bg,
+                               main = label)
+      }else{
+        plot_gate <- res_gate$plot
+      }
+      plot_list[[paste0(pattern, collapse = ":")]] <- plot_gate
+      ff <- ff[idt_bg, ]
+    }
+    df_traditional[, label] <- nrow(ff)
+    plot_traditional[[label]] <- plot_list[[length(plot_list)]]
+    if (!dir.exists(paste0(output.dir, "/", label)))
+      dir.create(paste0(output.dir, "/", label))
+    flowCore::write.FCS(ff, filename = paste0(output.dir,
+                                              "/", label, "/", id, ".fcs"))
+  }
+  nrow <- ifelse(length(plot_traditional)%%2 == 0, length(plot_traditional)/2,
+                 length(plot_traditional)/2 + 1)
+  result_plot <- ggpubr::ggarrange(plotlist = plot_traditional,
+                                   ncol = 2, nrow = nrow)
+  result_filename <- paste0(output.dir, "/Traditional_counts.txt")
+  if (!dir.exists(paste0(output.dir, "/plots")))
+    dir.create(paste0(output.dir, "/plots"))
+  ggplot2::ggsave(paste0(output.dir, "/plots/", gsub(".fcs$",
+                                                     "", id), ".pdf"), plot = result_plot, device = "pdf",
+                  width = 15, height = 6 * nrow)
+  df_traditional$Sys_Time <- Sys.time()
+  write.table(x = df_traditional, file = result_filename,
+              col.names = !file.exists(result_filename), sep = "\t",
+              row.names = FALSE, append = file.exists(result_filename),
+              quote = FALSE)
+}
+
+gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K = 2, usePrior = "no",
+                                      prior = list(NA), trans = 0, min.count = -1, max.count = -1,
+                                      nstart = 1, plot = FALSE, target = NULL, transitional = FALSE,
+                                      quantile = 0.9, translation = 0.25, transitional_angle = NULL,
+                                      min = NULL, max = NULL, prev_gate="", ...)
+{
+  options(cores = 1L)
+  if (!is.null(target)) {
+    target <- as.numeric(target)
+    if (length(target) != 2) {
+      warning("The 'target' location must be a numeric vector of length 2.\n               Using largest cluster instead...")
+      target <- NULL
+    }
+  }
+  if (!(is.null(min) && is.null(max))) {
+    fr <- .truncate_flowframe(fr, channels = c(xChannel,
+                                               yChannel), min = min, max = max)
+  }
+  if (usePrior == "yes" && identical(prior, list(NA))) {
+    prior <- prior_flowclust(fr = fr, channels = c(xChannel,
+                                                   yChannel), K = K)
+  }
+
+  rds_obj <- paste0("tmp/", basename(fr@description$FILENAME), "-", gsub(";", "", prev_gate), "-", xChannel, yChannel, "-", K, ".rds")
+  if(file.exists(rds_obj)){
+    message("Reading: ", rds_obj)
+    tmix_results <- readRDS(rds_obj)
+  }else{
+    tmix_results <- flowClust(fr, varNames = c(xChannel, yChannel),
+                              K = K, trans = trans, usePrior = usePrior, prior = prior,
+                              min.count = min.count, max.count = max.count, nstart = nstart,
+                              ...)
+    message("Saving: ", rds_obj)
+    saveRDS(tmix_results, rds_obj)
+  }
+  if (class(tmix_results) == "try-error") {
+    tmix_results <- new("flowClust", varNames = c(xChannel,
+                                                  yChannel), K = K, w = prior$w0, mu = prior$Mu0,
+                        sigma = prior$Lambda0, nu = 4, prior = prior, ruleOutliers = c(0,
+                                                                                       quantile, quantile))
+  }
+  fitted_means <- getEstimates(tmix_results)$locations
+  if (is.null(target)) {
+    cluster_selected <- which.max(tmix_results@w)
+  }
+  else {
+    target_dist <- as.matrix(dist(rbind(fitted_means, target)))
+    target_dist <- tail(target_dist, n = 1)[seq_len(K)]
+    cluster_selected <- which.min(target_dist)
+  }
+  if (!transitional) {
+    flowClust_gate <- openCyto:::.getEllipseGate(filter = tmix_results,
+                                                 include = cluster_selected, quantile = quantile,
+                                                 trans = trans)
+  }
+  else {
+    chisq_quantile <- qchisq(quantile, df = 2)
+    tol <- sqrt(.Machine$double.eps)
+    xbar <- tmix_results@mu[cluster_selected, ]
+    Sigma <- tmix_results@sigma[cluster_selected, , ]
+    Sigma_eigen <- eigen(Sigma, symmetric = TRUE)
+    u1 <- Sigma_eigen$vectors[, 1]
+    u2 <- Sigma_eigen$vectors[, 2]
+    lambda1 <- Sigma_eigen$values[1]
+    lambda2 <- Sigma_eigen$values[2]
+    u1_angle <- atan2(u1[2], u1[1])
+    if (u1_angle < 0) {
+      u1_angle <- u1_angle + 2 * pi
+    }
+    u2_angle <- atan2(u2[2], u2[1])
+    if (u2_angle < 0) {
+      u2_angle <- u2_angle + 2 * pi
+    }
+    if (u1_angle > pi) {
+      R <- .rotation_matrix(pi)
+      u1 <- as.vector(R %*% u1)
+    }
+    if (u2_angle > pi) {
+      R <- .rotation_matrix(pi)
+      u2 <- as.vector(R %*% u2)
+    }
+    u1_angle <- atan2(u1[2], u1[1])
+    if (u1_angle < 0) {
+      u1_angle <- u1_angle + 2 * pi
+    }
+    u2_angle <- atan2(u2[2], u2[1])
+    if (u2_angle < 0) {
+      u2_angle <- u2_angle + 2 * pi
+    }
+    eigen_angles <- c(u1_angle, u2_angle)
+    if (is.null(transitional_angle)) {
+      which_pos_quadrant <- which(0 < eigen_angles & eigen_angles <
+                                    pi/2)
+      transitional_angle <- eigen_angles[which_pos_quadrant]
+      if (which_pos_quadrant == 1) {
+        axis <- sqrt(lambda1 * chisq_quantile) * u1
+        axis_perp <- sqrt(lambda2 * chisq_quantile) *
+          u2
+      }
+      else {
+        axis <- sqrt(lambda2 * chisq_quantile) * u2
+        axis_perp <- sqrt(lambda1 * chisq_quantile) *
+          u1
+      }
+    }
+    else {
+      theta_u1 <- transitional_angle - eigen_angles[1]
+      theta_u2 <- transitional_angle - (pi/2) - eigen_angles[2]
+      R1 <- .rotation_matrix(theta_u1)
+      R2 <- .rotation_matrix(theta_u2)
+      u1 <- as.vector(R1 %*% u1)
+      u2 <- as.vector(R2 %*% u2)
+      axis <- sqrt(lambda1 * chisq_quantile) * u1
+      axis_perp <- -sqrt(lambda2 * chisq_quantile) * u2
+    }
+    gate_location <- xbar + translation * axis
+    x <- exprs(fr)[, xChannel]
+    y <- exprs(fr)[, yChannel]
+    x_min <- min(x) - sd(x)
+    y_min <- min(y) - sd(y)
+    x_max <- max(x) + sd(x)
+    y_max <- max(y) + sd(y)
+    first_vertex <- gate_location + axis_perp
+    fifth_vertex <- gate_location - axis_perp
+    if (0 <= transitional_angle && transitional_angle <=
+        pi/2) {
+      second_vertex <- c(first_vertex[1], y_max)
+      third_vertex <- c(x_max, y_max)
+      fourth_vertex <- c(x_max, fifth_vertex[2])
+    }
+    else if (pi/2 < transitional_angle && transitional_angle <=
+             pi) {
+      second_vertex <- c(x_min, first_vertex[2])
+      third_vertex <- c(x_min, y_max)
+      fourth_vertex <- c(fifth_vertex[1], y_max)
+    }
+    else if (pi < transitional_angle && transitional_angle <=
+             3 * pi/2) {
+      second_vertex <- c(first_vertex[1], y_min)
+      third_vertex <- c(x_min, y_min)
+      fourth_vertex <- c(x_min, fifth_vertex[2])
+    }
+    else {
+      second_vertex <- c(x_max, first_vertex[2])
+      third_vertex <- c(x_max, y_min)
+      fourth_vertex <- c(fifth_vertex[1], y_min)
+    }
+    polygon_gate <- rbind(first_vertex, second_vertex, third_vertex,
+                          fourth_vertex, fifth_vertex, first_vertex)
+    colnames(polygon_gate) <- c(xChannel, yChannel)
+    flowClust_gate <- polygonGate(filterId = filterId, .gate = polygon_gate)
+  }
+  posteriors <- list(mu = tmix_results@mu, lambda = tmix_results@lambda,
+                     sigma = tmix_results@sigma, nu = tmix_results@nu)
+  if (plot) {
+    plot(data = fr, tmix_results, main = filterId)
+    if (transitional) {
+      lines(rbind(xbar - axis, xbar + axis), col = "darkgreen")
+      lines(rbind(xbar - axis_perp, xbar + axis_perp),
+            col = "darkgreen")
+      lines(polygon_gate, col = "red")
+      lines(rbind(gate_location - axis_perp, gate_location +
+                    axis_perp), col = "red")
+      points(polygon_gate, col = "red", pch = 16)
+    }
+  }
+  if (class(flowClust_gate) == "polygonGate")
+    openCyto:::fcPolygonGate(flowClust_gate, prior, posteriors)
+  else openCyto:::fcEllipsoidGate(flowClust_gate, prior, posteriors)
+}
+
+
+apply_gate_cuadrant <- function(ff, channel, channel_sign, main="", prev_gate=""){
+  library(flowClust)
+  channel <- sapply(channel, function(x) substr(x, 1, nchar(x) - 1))
+  logicle_chnls <- channel
+  lgcl <- flowCore::logicleTransform()
+  trans <- flowCore::transformList(logicle_chnls, lgcl)
+  fC_plot <- ggcyto::transform(ff, trans)
+
+  range_x <- quantile(fC_plot@exprs[, channel[1]], c(0.1, 0.9))#range(fC_plot@exprs[, channel[1]])
+  range_y <- quantile(fC_plot@exprs[, channel[2]], c(0.1, 0.9))#range(fC_plot@exprs[, channel[2]])
+
+  cl1 <- c(range_x[1], range_y[1])
+  cl2 <- c(range_x[1], range_y[2])
+  cl3 <- c(range_x[2], range_y[1])
+  cl4 <- c(range_x[2], range_y[2])
+  K_cluster <- 12
+
+  getGate <- function(fC_plot, channel, K_cluster, target, quantile=0.8){
+
+    gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate)
+    gate_bg_v2 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=4, target = target, quantile = quantile, prev_gate=prev_gate)
+
+    if(sqrt(sum(gate_bg_v1@mean-cl2)^2)>0.5){
+      K_cluster <- K_cluster*2
+      gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate)
+    }
+
+    if(sum(flowCore::filter(fC_plot, gate_bg_v1)@subSet & flowCore::filter(fC_plot, gate_bg_v2)@subSet)/sum(flowCore::filter(fC_plot, gate_bg_v1)@subSet)>0.25){
+      gate_bg <- gate_bg_v2
+    }else{
+      gate_bg <- gate_bg_v1
+    }
+
+    return(gate_bg)
+  }
+
+  idt <- rep(TRUE, nrow(fC_plot))
+  if(channel_sign[1]=="-" & channel_sign[2]=="-"){
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl1)
+    idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
+  }else if(channel_sign[1]=="-" & channel_sign[2]=="+"){
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl2)
+    idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
+  }else if(channel_sign[1]=="+" & channel_sign[2]=="-"){
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl3)
+    idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
+  }else{
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl4)
+    idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
+  }
+
+  p <- ggcyto::autoplot(fC_plot, x = channel[1], y = channel[2], bins = 100)+ggcyto::geom_gate(gate_bg)
+  p <- p + ggplot2::theme_bw() + ggplot2::theme(strip.text.x = ggplot2::element_text(size = 0,
+                                                                                     colour = "orange", angle = 90))
+  p <- ggcyto::as.ggplot(p)
+  labels <- fC_plot@parameters@data$desc[match(channel, fC_plot@parameters@data$name)]
+  labels[is.na(labels)] <- channel[is.na(labels)]
+  for (i in 1:length(labels)) {
+    if (labels[i] != channel[i]) {
+      labels[i] <- paste0(labels[i], " (", channel[i],
+                          ")")
+    }
+  }
+  labels[match(logicle_chnls, channel)] <- paste0(labels[match(logicle_chnls,
+                                                               channel)], " - logicleTransform")
+  p <- p + ggplot2::xlab(labels[1]) + ggplot2::ylab(labels[2])
+  p <- p + ggplot2::ggtitle(label = main) + ggplot2::theme(plot.title = ggplot2::element_text(size = 15,
+                                                                                              face = "bold", hjust = 0.5))
+  p <- p + ggplot2::theme(legend.position = "none")
+  result <- list(idt = idt, channel = channel, gate_bg = list("join"=gate_bg), plot=p)
+
+  return(result)
+}
+
 #' Run Proportion Estimation and Gating for Multiple Files
 #'
 #' This function runs the proportion estimation and gating process for multiple files.
@@ -488,7 +831,7 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
   process_file <- function(filename, output.dir, info_panel) {
     tryCatch({
       id <- gsub(".fcs$", "", basename(filename))
-      doEstimateProportion(filename = filename, id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+      doEstimateProportion2(filename = filename, id = id, info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
     },
     error=function(e) {
       log_file_error_traditional(paste("File: ", filename, "\n", e))
@@ -509,6 +852,7 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
     }
   }
 }
+
 
 
 

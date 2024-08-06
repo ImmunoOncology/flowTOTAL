@@ -63,15 +63,27 @@ simplify_flowCore <- function(filename, keep = NULL) {
   # Read the FCS file using flowCore
   fC <- flowCore::read.FCS(filename)
 
+  # Check which column to keep. By default name
+  desc_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500"), function(x) any(grepl(x, fC@parameters@data$desc))))
+  name_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500"), function(x) any(grepl(x, fC@parameters@data$name))))
+
   # Identify indices of shape and time channels
   parameters_name <- names(fC@parameters@data$name)
   parameters_desc <- names(fC@parameters@data$desc)
-  idt <- unique(c(grep("[FS]SC-", fC@parameters@data$name), grep("Time", fC@parameters@data$name), which(is.na(fC@parameters@data$desc))))
 
-  # Update parameter names and descriptions
-  fC@parameters@data$name[-idt] <- fC@parameters@data$desc[-idt]
-  names(fC@parameters@data$name)[-idt] <- parameters_name[-idt]
-  names(fC@parameters@data$desc)[-idt] <- parameters_desc[-idt]
+  if(desc_column){
+    # Update parameter descriptions and names
+    fC@parameters@data$desc <- fC@parameters@data$name
+    names(fC@parameters@data$name) <- parameters_name
+    names(fC@parameters@data$desc) <- parameters_desc
+
+  }else{
+    # Update parameter names and descriptions
+    fC@parameters@data$name <- fC@parameters@data$desc
+    names(fC@parameters@data$name) <- parameters_name
+    names(fC@parameters@data$desc) <- parameters_desc
+
+  }
 
   # Update column names in the exprs matrix
   colnames(fC@exprs) <- fC@parameters@data$name
@@ -133,7 +145,11 @@ doPreprocessing <- function(file, filename, output, report = TRUE) {
   # Set identifier and compensate if necessary
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
   if ("SPILL" %in% names(ff@description)) {
-    ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
+    if(all(colnames(flowCore::spillover(ff)$SPILL)%in%colnames(ff@exprs))){
+      ff_comp <- flowCore::compensate(ff, spillover = flowCore::spillover(ff)$SPILL)
+    }else{
+      ff_comp <- ff
+    }
   } else {
     ff_comp <- ff
   }

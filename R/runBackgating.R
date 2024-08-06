@@ -244,19 +244,29 @@ doDensityBackgating <- function(ff, filename, output.dir, chnl = c("FSC-A", "SSC
     dummy <- density(ff@exprs[keep, panel_channel[j]], adjust = 0.5)
 
     # Refine peak positions based on density
-    while (nrow(n_peaks_dummy) > 1 && all(sapply(dummy$y[dummy$x > n_peaks_dummy$x[1] & dummy$x < n_peaks_dummy$x[2]][-1], function(x) dummy$y[dummy$x > n_peaks_dummy$x[1] & dummy$x < n_peaks_dummy$x[2]][1] - x) < 0)) {
-      n_peaks_dummy <- n_peaks_dummy[2:nrow(n_peaks_dummy), ]
+    while (nrow(n_peaks_dummy) > 1 &&
+           (
+             any(sapply(dummy$y[dummy$x > n_peaks_dummy$x[1] & dummy$x < n_peaks_dummy$x[2]][-1],
+                        function(x) dummy$y[dummy$x > n_peaks_dummy$x[1] & dummy$x < n_peaks_dummy$x[2]][1] - x) < 0)
+             |
+             abs(1-n_peaks_dummy$y[1]/n_peaks_dummy$y[2])<0.25 & abs(n_peaks_dummy$x[1]-n_peaks_dummy$x[2])<10000
+           )
+    ) {
+      n_peaks_dummy <- n_peaks_dummy[2:nrow(n_peaks_dummy),
+      ]
     }
 
+    side <- "right"
     # Determine the reference peak
     if (n_peaks$x[1] != n_peaks_dummy$x[1]) {
       ref <- which(n_peaks$x == n_peaks_dummy$x[1])
+      if(nrow(n_peaks_dummy)==1) side <- "left"
     } else {
       ref <- 1
     }
 
     # Apply custom gating to the channel
-    gate_chnl[[j]] <- gate_tail_custom(ff[keep, ], panel_channel[j], adjust = 0.5, ref_peak = ref, auto_tol = TRUE, num_peaks = nrow(n_peaks))
+    gate_chnl[[j]] <- gate_tail_custom(ff[keep, ], panel_channel[j], adjust = 0.5, ref_peak = ref, auto_tol = TRUE, num_peaks = nrow(n_peaks), side=side)
 
     # Handle the case of a single peak
     if (nrow(n_peaks) == 1) {
