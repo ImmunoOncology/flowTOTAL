@@ -140,7 +140,11 @@ doPreprocessing <- function(file, filename, output, report = TRUE) {
   }
 
   # Read the input FCS file
-  ff <- flowCore::read.FCS(file)
+  ff <- tryCatch({
+    flowCore::read.FCS(file)
+  }, error = function(x) {
+    flowCore::read.FCS(file, emptyValue = F)
+  })
 
   # Set identifier and compensate if necessary
   flowCore::identifier(ff) <- gsub(".fcs$", "", filename)
