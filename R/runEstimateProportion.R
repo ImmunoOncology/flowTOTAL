@@ -492,7 +492,7 @@ doEstimateProportion2 <- function (filename, id = NULL, output.dir, info_panel, 
       names(channel) <- names(channel_sign)
       channel <- paste0(channel, channel_sign)
       if(grepl(":", pattern_name)){
-        res_gate <- apply_gate_cuadrant(ff = ff, channel = channel, channel_sign = channel_sign, main=label, prev_gate=prev_gate)
+        res_gate <- apply_gate_cuadrant(ff = ff, channel = channel, channel_sign = channel_sign, main=label, prev_gate=prev_gate, output.dir=output.dir)
         plot_gate <- TRUE
       }else{
         res_gate <- apply_gate(ff, channel, cutpoint_min = cutpoint_min,
@@ -544,7 +544,7 @@ gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K =
                                       prior = list(NA), trans = 0, min.count = -1, max.count = -1,
                                       nstart = 1, plot = FALSE, target = NULL, transitional = FALSE,
                                       quantile = 0.9, translation = 0.25, transitional_angle = NULL,
-                                      min = NULL, max = NULL, prev_gate="", ...)
+                                      min = NULL, max = NULL, prev_gate="", output.dir, ...)
 {
   options(cores = 1L)
   if (!is.null(target)) {
@@ -712,7 +712,7 @@ gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K =
 }
 
 
-apply_gate_cuadrant <- function(ff, channel, channel_sign, main="", prev_gate=""){
+apply_gate_cuadrant <- function(ff, channel, channel_sign, main="", prev_gate="", output.dir){
   library(flowClust)
   channel <- sapply(channel, function(x) substr(x, 1, nchar(x) - 1))
   logicle_chnls <- channel
@@ -729,14 +729,14 @@ apply_gate_cuadrant <- function(ff, channel, channel_sign, main="", prev_gate=""
   cl4 <- c(range_x[2], range_y[2])
   K_cluster <- 12
 
-  getGate <- function(fC_plot, channel, K_cluster, target, quantile=0.8){
+  getGate <- function(fC_plot, channel, K_cluster, target, quantile=0.8, output.dir){
 
-    gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate)
-    gate_bg_v2 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=4, target = target, quantile = quantile, prev_gate=prev_gate)
+    gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate, output.dir=output.dir)
+    gate_bg_v2 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=4, target = target, quantile = quantile, prev_gate=prev_gate, output.dir=output.dir)
 
     if(sqrt(sum(gate_bg_v1@mean-cl2)^2)>0.5){
       K_cluster <- K_cluster*2
-      gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate)
+      gate_bg_v1 <- gate_flowclust_2d_custom(fC_plot, yChannel  = channel[2], xChannel = channel[1], K=K_cluster, target = target, quantile = quantile, prev_gate=prev_gate, output.dir=output.dir)
     }
 
     if(sum(flowCore::filter(fC_plot, gate_bg_v1)@subSet & flowCore::filter(fC_plot, gate_bg_v2)@subSet)/sum(flowCore::filter(fC_plot, gate_bg_v1)@subSet)>0.25){
@@ -750,16 +750,16 @@ apply_gate_cuadrant <- function(ff, channel, channel_sign, main="", prev_gate=""
 
   idt <- rep(TRUE, nrow(fC_plot))
   if(channel_sign[1]=="-" & channel_sign[2]=="-"){
-    gate_bg <- getGate(fC_plot, channel, K_cluster, cl1)
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl1, output.dir=output.dir)
     idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
   }else if(channel_sign[1]=="-" & channel_sign[2]=="+"){
-    gate_bg <- getGate(fC_plot, channel, K_cluster, cl2)
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl2, output.dir=output.dir)
     idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
   }else if(channel_sign[1]=="+" & channel_sign[2]=="-"){
-    gate_bg <- getGate(fC_plot, channel, K_cluster, cl3)
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl3, output.dir=output.dir)
     idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
   }else{
-    gate_bg <- getGate(fC_plot, channel, K_cluster, cl4)
+    gate_bg <- getGate(fC_plot, channel, K_cluster, cl4, output.dir=output.dir)
     idt <- idt & flowCore::filter(fC_plot, gate_bg)@subSet
   }
 
