@@ -563,6 +563,7 @@ gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K =
                                                    yChannel), K = K)
   }
 
+  if(!dir.exist(paste0(output.dir, "/tmp"))) dir.create(paste0(output.dir, "/tmp"))
   rds_obj <- paste0(output.dir, "/tmp/", basename(fr@description$FILENAME), "-", gsub(";", "", prev_gate), "-", xChannel, yChannel, "-", K, ".rds")
   if(file.exists(rds_obj)){
     message("Reading: ", rds_obj)
