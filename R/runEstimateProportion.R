@@ -563,7 +563,7 @@ gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K =
                                                    yChannel), K = K)
   }
 
-  rds_obj <- paste0("tmp/", basename(fr@description$FILENAME), "-", gsub(";", "", prev_gate), "-", xChannel, yChannel, "-", K, ".rds")
+  rds_obj <- paste0(output.dir, "/tmp/", basename(fr@description$FILENAME), "-", gsub(";", "", prev_gate), "-", xChannel, yChannel, "-", K, ".rds")
   if(file.exists(rds_obj)){
     message("Reading: ", rds_obj)
     tmix_results <- readRDS(rds_obj)
