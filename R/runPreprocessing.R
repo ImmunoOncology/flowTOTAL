@@ -64,20 +64,32 @@ simplify_flowCore <- function(filename, keep = NULL) {
   fC <- flowCore::read.FCS(filename)
 
   # Check which column to keep. By default name
-  desc_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue"), function(x) any(grepl(x, fC@parameters@data$desc))))
-  name_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue"), function(x) any(grepl(x, fC@parameters@data$name))))
+  desc_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue", "Pe-Cy7"), function(x) any(grepl(x, fC@parameters@data$desc))))
+  name_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue", "Pe-Cy7"), function(x) any(grepl(x, fC@parameters@data$name))))
 
   # Identify indices of shape and time channels
   parameters_name <- names(fC@parameters@data$name)
   parameters_desc <- names(fC@parameters@data$desc)
 
   if(desc_column){
+
+    # FSC, SSC and Time
+    if(grepl("^FSC", fC@parameters@data$desc)) fC@parameters@data$name[grepl("^FSC", fC@parameters@data$desc)] <- fC@parameters@data$desc[grepl("^FSC", fC@parameters@data$desc)]
+    if(grepl("^SSC", fC@parameters@data$desc)) fC@parameters@data$name[grepl("^SSC", fC@parameters@data$desc)] <- fC@parameters@data$desc[grepl("^SSC", fC@parameters@data$desc)]
+    if(grepl("Time", fC@parameters@data$desc)) fC@parameters@data$name[grepl("Time", fC@parameters@data$desc)] <- fC@parameters@data$desc[grepl("Time", fC@parameters@data$desc)]
+
     # Update parameter descriptions and names
     fC@parameters@data$desc <- fC@parameters@data$name
     names(fC@parameters@data$name) <- parameters_name
     names(fC@parameters@data$desc) <- parameters_desc
 
   }else{
+
+    # FSC, SSC and Time
+    if(grepl("^FSC", fC@parameters@data$name)) fC@parameters@data$desc[grepl("^FSC", fC@parameters@data$name)] <- fC@parameters@data$name[grepl("^FSC", fC@parameters@data$name)]
+    if(grepl("^SSC", fC@parameters@data$name)) fC@parameters@data$desc[grepl("^SSC", fC@parameters@data$name)] <- fC@parameters@data$name[grepl("^SSC", fC@parameters@data$name)]
+    if(grepl("Time", fC@parameters@data$name)) fC@parameters@data$desc[grepl("Time", fC@parameters@data$name)] <- fC@parameters@data$name[grepl("Time", fC@parameters@data$name)]
+
     # Update parameter names and descriptions
     fC@parameters@data$name <- fC@parameters@data$desc
     names(fC@parameters@data$name) <- parameters_name
