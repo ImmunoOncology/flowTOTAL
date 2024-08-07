@@ -64,8 +64,8 @@ simplify_flowCore <- function(filename, keep = NULL) {
   fC <- flowCore::read.FCS(filename)
 
   # Check which column to keep. By default name
-  desc_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710"), function(x) any(grepl(x, fC@parameters@data$desc))))
-  name_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710"), function(x) any(grepl(x, fC@parameters@data$name))))
+  desc_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue"), function(x) any(grepl(x, fC@parameters@data$desc))))
+  name_column <- any(sapply(c("APC", "FIT", "PerCp", "V450", "V500", "R660", "B710", "Violet", "Red", "Blue"), function(x) any(grepl(x, fC@parameters@data$name))))
 
   # Identify indices of shape and time channels
   parameters_name <- names(fC@parameters@data$name)
