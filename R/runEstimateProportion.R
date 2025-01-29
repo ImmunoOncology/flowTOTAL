@@ -585,16 +585,35 @@ do_quadrant2 <- function(ff_experiment, gate_quadrant, channel, downsample=10000
   flowClust_raw1 <- flowClust::flowClust(ff_experiment[idt1, ], varNames = c(channel),
                                          K = 1, trans = 0, usePrior = "no", prior = NULL,
                                          min.count = -1, max.count = -1, nstart = 1, nu=Inf) #lambda=2
+
+  if(any(is.na(flowClust_raw1@mu)))
+    flowClust_raw1 <- flowClust::flowClust(ff_experiment[idt1, ], varNames = c(channel),
+                                           K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                           min.count = -1, max.count = -1, nstart = 1, nu=100) #lambda=2
+
   flowClust_raw2 <- flowClust::flowClust(ff_experiment[idt2, ], varNames = c(channel),
                                          K = 1, trans = 0, usePrior = "no", prior = NULL,
                                          min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+  if(any(is.na(flowClust_raw2@mu)))
+    flowClust_raw2 <- flowClust::flowClust(ff_experiment[idt2, ], varNames = c(channel),
+                                           K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                           min.count = -1, max.count = -1, nstart = 1, nu=100)
+
   flowClust_raw3 <- flowClust::flowClust(ff_experiment[idt3, ], varNames = c(channel),
                                          K = 1, trans = 0, usePrior = "no", prior = NULL,
                                          min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+  if(any(is.na(flowClust_raw3@mu)))
+    flowClust_raw3 <- flowClust::flowClust(ff_experiment[idt3, ], varNames = c(channel),
+                                           K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                           min.count = -1, max.count = -1, nstart = 1, nu=100)
 
   flowClust_raw4 <- flowClust::flowClust(ff_experiment[idt4, ], varNames = c(channel),
                                          K = 1, trans = 0, usePrior = "no", prior = NULL,
                                          min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+  if(any(is.na(flowClust_raw4@mu)))
+    flowClust_raw4 <- flowClust::flowClust(ff_experiment[idt4, ], varNames = c(channel),
+                                           K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                           min.count = -1, max.count = -1, nstart = 1, nu=100)
 
   gate_flowClust.target1 <- openCyto:::.getEllipseGate(filter = flowClust_raw1,
                                                        include = 1, quantile = 0.9,
