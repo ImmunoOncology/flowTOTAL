@@ -657,10 +657,10 @@ doEstimateProportion3 <- function (output.dir, info_panel, cutpoint_min = 1,
 
     df_pattern <- data.frame(
       ID=samples_names,
-      target1=filter(ff_experiment, apply_exp_quadran$gates$target1)@subSet,
-      target2=filter(ff_experiment, apply_exp_quadran$gates$target2)@subSet,
-      target3=filter(ff_experiment, apply_exp_quadran$gates$target3)@subSet,
-      target4=filter(ff_experiment, apply_exp_quadran$gates$target4)@subSet)
+      target1=flowCore::filter(ff_experiment, apply_exp_quadran$gates$target1)@subSet,
+      target2=flowCore::filter(ff_experiment, apply_exp_quadran$gates$target2)@subSet,
+      target3=flowCore::filter(ff_experiment, apply_exp_quadran$gates$target3)@subSet,
+      target4=flowCore::filter(ff_experiment, apply_exp_quadran$gates$target4)@subSet)
 
     df_counts <- data.frame(
       ID=gsub(".fcs$", "", aggregate(df_pattern$target1, by=list(df_pattern$ID), FUN=sum)$Group.1),
@@ -701,7 +701,7 @@ doEstimateProportion3 <- function (output.dir, info_panel, cutpoint_min = 1,
 
       if (!dir.exists(paste0(output.dir, "/", name)))
         dir.create(paste0(output.dir, "/", name))
-      flowCore::write.FCS(ff_experiment[filter(ff_experiment, gate_flowClust)@subSet & idt_sample, ], filename = paste0(output.dir,
+      flowCore::write.FCS(ff_experiment[flowCore::filter(ff_experiment, gate_flowClust)@subSet & idt_sample, ], filename = paste0(output.dir,
                                                                                                                         "/", name, "/", sample))
     }
 
