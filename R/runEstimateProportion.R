@@ -29,9 +29,18 @@ do_ggcyto <- function(fC, channels, gates = NULL, logicle_chnls = NULL, main = N
 
     # Rescale gates if provided
     if (!is.null(gates)) {
-      for (gate_idt in logicle_chnls) {
-        logicle_chnls_tr <- logicle_chnls[logicle_chnls %in% names(gates[[gate_idt]]@min)]
-        gates[[gate_idt]] <- ggcyto::rescale_gate(gates[[gate_idt]], lgcl, logicle_chnls_tr)
+      if (class(gates) %in% c("fcEllipsoidGate", "ellipsoidGate")) {
+        logicle_chnls_tr <- names(gates@mean)
+        gates_bla <- ggcyto::rescale_gate(gates, lgcl,
+                                          logicle_chnls_tr)
+        gates <- list(logicle_chnls_tr = gates_bla)
+      }else{
+        for (gate_idt in logicle_chnls) {
+          logicle_chnls_tr <- logicle_chnls[logicle_chnls %in%
+                                              names(gates[[gate_idt]]@min)]
+          gates[[gate_idt]] <- ggcyto::rescale_gate(gates[[gate_idt]],
+                                                    lgcl, logicle_chnls_tr)
+        }
       }
     }
 
