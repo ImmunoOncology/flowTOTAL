@@ -459,13 +459,16 @@ doEstimateProportion2 <- function (filename, id = NULL, output.dir, info_panel, 
     id <- filename
   ff.raw <- flowCore::read.FCS(filename)
   n.total <- nrow(ff.raw)
+
+  info_panel_red <- info_panel[-grep(":", info_panel$Pattern), ]
+
   df_traditional <- data.frame(File = filename, ID = id)
   df_traditional$N.total <- n.total
-  df_traditional[, info_panel$Label] <- NA
+  df_traditional[, info_panel_red$Label] <- NA
   plot_traditional <- list()
-  for (i in 1:nrow(info_panel)) {
-    pattern_list <- info_panel$Pattern[i]
-    label <- info_panel$Label[i]
+  for (i in 1:nrow(info_panel_red)) {
+    pattern_list <- info_panel_red$Pattern[i]
+    label <- info_panel_red$Label[i]
     pattern_list <- unlist(strsplit(pattern_list, "[.]"))
     pattern_list <- sapply(pattern_list, strsplit, "[;:]")
     prev_gate <- NULL
@@ -548,6 +551,176 @@ doEstimateProportion2 <- function (filename, id = NULL, output.dir, info_panel, 
               row.names = FALSE, append = file.exists(result_filename),
               quote = FALSE)
 }
+
+
+get_prior <- function(flow_cust, ff){
+
+  prior <- flowStats::flowClust2Prior(flow_cust, kappa = 1, Nt = 5000)
+  prior_list <- list()
+  prior_list$Lambda0 <- prior$Lambda0/10
+  prior_list$Omega0 <- prior$Omega0
+  prior_list$w0 <- prior$w0
+  prior_list$nu0 <- prior$nu0
+  prior_list$nu <- prior$nu
+  prior_list$lambda <- prior$lambda
+  prior_list$K <- prior$K
+  prior_list$Mu0 <- prior$Mu0
+
+  prior_list$Mu0[1, ] <- colMeans(apply(ff, 2, quantile, c(0.99, 0.01)))
+
+  return(prior_list)
+}
+
+do_quadrant2 <- function(ff_experiment, gate_quadrant, channel, downsample=100000){
+
+  idt1 <- ff_experiment@exprs[, channel[1]] < gate_quadrant[[channel[1]]]@min &
+    ff_experiment@exprs[, channel[2]] < gate_quadrant[[channel[2]]]@min
+  idt2 <- ff_experiment@exprs[, channel[1]] >= gate_quadrant[[channel[1]]]@min &
+    ff_experiment@exprs[, channel[2]] < gate_quadrant[[channel[2]]]@min
+  idt3 <- ff_experiment@exprs[, channel[1]] < gate_quadrant[[channel[1]]]@min &
+    ff_experiment@exprs[, channel[2]] >= gate_quadrant[[channel[2]]]@min
+  idt4 <- ff_experiment@exprs[, channel[1]] >= gate_quadrant[[channel[1]]]@min &
+    ff_experiment@exprs[, channel[2]] >= gate_quadrant[[channel[2]]]@min
+
+  flowClust_raw1 <- flowClust::flowClust(ff_experiment[idt1, ], varNames = c(channel),
+                                         K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                         min.count = -1, max.count = -1, nstart = 1, nu=Inf) #lambda=2
+  flowClust_raw2 <- flowClust::flowClust(ff_experiment[idt2, ], varNames = c(channel),
+                                         K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                         min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+  flowClust_raw3 <- flowClust::flowClust(ff_experiment[idt3, ], varNames = c(channel),
+                                         K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                         min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+
+  flowClust_raw4 <- flowClust::flowClust(ff_experiment[idt4, ], varNames = c(channel),
+                                         K = 1, trans = 0, usePrior = "no", prior = NULL,
+                                         min.count = -1, max.count = -1, nstart = 1, nu=Inf)
+
+  gate_flowClust.target1 <- openCyto:::.getEllipseGate(filter = flowClust_raw1,
+                                                       include = 1, quantile = 0.9,
+                                                       trans = 0)
+  gate_flowClust.target2 <- openCyto:::.getEllipseGate(filter = flowClust_raw2,
+                                                       include = 1, quantile = 0.9,
+                                                       trans = 0)
+  gate_flowClust.target3 <- openCyto:::.getEllipseGate(filter = flowClust_raw3,
+                                                       include = 1, quantile = 0.9,
+                                                       trans = 0)
+  gate_flowClust.target4 <- openCyto:::.getEllipseGate(filter = flowClust_raw4,
+                                                       include = 1, quantile = 0.9,
+                                                       trans = 0)
+
+  # p1 <- flowTOTAL::do_ggcyto(fC = ff_experiment, channels = channel, logicle_chnls = channel, gates = gate_flowClust.target1)
+  # p2 <- flowTOTAL::do_ggcyto(fC = ff_experiment, channels = channel, logicle_chnls = channel, gates = gate_flowClust.target2)
+  # p3 <- flowTOTAL::do_ggcyto(fC = ff_experiment, channels = channel, logicle_chnls = channel, gates = gate_flowClust.target3)
+  # p4 <- flowTOTAL::do_ggcyto(fC = ff_experiment, channels = channel, logicle_chnls = channel, gates = gate_flowClust.target4)
+
+  return(list(
+    #plots=list(p1, p2, p3, p4),
+    gates=list(
+      target1=gate_flowClust.target1,
+      target2=gate_flowClust.target2,
+      target3=gate_flowClust.target3,
+      target4=gate_flowClust.target4)
+  ))
+}
+
+
+doEstimateProportion3 <- function (output.dir, info_panel, cutpoint_min = 1,
+                                   cutpoint_max = 5e+05) {
+
+  info_panel_red <- info_panel[grep(":", info_panel$Pattern), ]
+
+
+  for(pattern in 1:nrow(info_panel_red)){
+    pattern_to_run <- info_panel_red$Pattern[pattern]
+    name <- info_panel_red$Label[pattern]
+
+    label <- strsplit(pattern_to_run, ":")[[1]][1]
+    channel <- strsplit(pattern_to_run, "[:;]")[[1]][c(2,3)]
+
+    files_fcs <- list.files(paste0(output.dir,"/", label), pattern = ".fcs", full.names = T)
+    label_fcs <- lapply(files_fcs, flowCore::read.FCS)
+
+    ff_experiment <- label_fcs[[1]]
+    samples_names <- rep(basename(label_fcs[[1]]@description$FILENAME), nrow(label_fcs[[1]]))
+
+    for(ff in label_fcs[-1]){
+      ff_experiment@exprs <- rbind(ff_experiment@exprs, ff@exprs)
+      samples_names <- c(samples_names, rep(basename(ff@description$FILENAME), nrow(ff)))
+    }
+
+    gate_quadrant <- flowTOTAL:::apply_gate(ff_experiment, channel, cutpoint_min = cutpoint_min,
+                                            cutpoint_max = cutpoint_max, return_plot = FALSE,
+                                            join = FALSE, traditional = TRUE)
+
+    apply_exp_quadran <- do_quadrant2(ff_experiment = ff_experiment, gate_quadrant = gate_quadrant$gate_bg, channel = gate_quadrant$channel, downsample = NULL)
+
+    df_pattern <- data.frame(
+      ID=samples_names,
+      target1=filter(ff_experiment, apply_exp_quadran$gates$target1)@subSet,
+      target2=filter(ff_experiment, apply_exp_quadran$gates$target2)@subSet,
+      target3=filter(ff_experiment, apply_exp_quadran$gates$target3)@subSet,
+      target4=filter(ff_experiment, apply_exp_quadran$gates$target4)@subSet)
+
+    df_counts <- data.frame(
+      ID=gsub(".fcs$", "", aggregate(df_pattern$target1, by=list(df_pattern$ID), FUN=sum)$Group.1),
+      target1=aggregate(df_pattern$target1, by=list(df_pattern$ID), FUN=sum)$x,
+      target2=aggregate(df_pattern$target2, by=list(df_pattern$ID), FUN=sum)$x,
+      target3=aggregate(df_pattern$target3, by=list(df_pattern$ID), FUN=sum)$x,
+      target4=aggregate(df_pattern$target4, by=list(df_pattern$ID), FUN=sum)$x
+    )
+
+    if(all(grepl("+", channel))){
+      df_counts <- df_counts[, c(1, 5)]
+      gate_flowClust <- apply_exp_quadran$gates$target4
+    }else if(all(grepl("-", channel))){
+      df_counts <- df_counts[, c(1, 2)]
+      gate_flowClust <- apply_exp_quadran$gates$target1
+    }else if(grepl(channel[1], "+") & grepl(channel[1], "-")){
+      df_counts <- df_counts[, c(1, 3)]
+      gate_flowClust <- apply_exp_quadran$gates$target2
+    }else{
+      df_counts <- df_counts[, c(1, 4)]
+      gate_flowClust <- apply_exp_quadran$gates$target3
+    }
+
+    for(sample in unique(samples_names)){
+      idt_sample <- samples_names%in%sample
+      plot_traditional <- list(
+        flowTOTAL::do_ggcyto(fC = ff_experiment[idt_sample, ], channels = gate_quadrant$channel, logicle_chnls = gate_quadrant$channel, gates = gate_quadrant$gate_bg),
+        flowTOTAL::do_ggcyto(ff_experiment[idt_sample, ], channels = gate_quadrant$channel, logicle_chnls = gate_quadrant$channel, gates = gate_flowClust)
+      )
+      result_plot <- ggpubr::ggarrange(plotlist = plot_traditional,
+                                       ncol = 2, nrow = 1)
+
+      if (!dir.exists(paste0(output.dir, "/plots/", name)))
+        dir.create(paste0(output.dir, "/plots/", name))
+
+      ggplot2::ggsave(paste0(output.dir, "/plots/", name, "/", gsub(".fcs$", "", sample), ".pdf"), plot = result_plot, device = "pdf",
+                      width = 15, height = 6)
+
+      if (!dir.exists(paste0(output.dir, "/", name)))
+        dir.create(paste0(output.dir, "/", name))
+      flowCore::write.FCS(ff_experiment[filter(ff_experiment, gate_flowClust)@subSet & idt_sample, ], filename = paste0(output.dir,
+                                                                                                                        "/", name, "/", sample))
+    }
+
+    result_filename <- paste0(output.dir, "/Traditional_counts.txt")
+
+    df_traditional <- read.delim(result_filename)
+    idt_match <- match(df_traditional$ID, df_counts[, 1])
+    df_traditional[, name] <- df_counts[idt_match, 2]
+
+    write.table(x = df_traditional, file = result_filename,
+                col.names = TRUE, sep = "\t",
+                row.names = FALSE, append = FALSE,
+                quote = FALSE)
+
+
+
+  }
+}
+
 
 gate_flowclust_2d_custom <- function (fr, xChannel, yChannel, filterId = "", K = 2, usePrior = "no",
                                       prior = list(NA), trans = 0, min.count = -1, max.count = -1,
@@ -861,6 +1034,10 @@ runEstimateProportion <- function(log_file_track, panel_estimate, output, cluste
       process_file(i, output.dir, info_panel)
     }
   }
+
+  if(any(grep(":", info_panel$Pattern)))
+    doEstimateProportion3(info_panel = info_panel, output.dir = output.dir, cutpoint_min = 0, cutpoint_max = 30000)
+
 }
 
 
