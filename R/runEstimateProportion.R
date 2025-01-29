@@ -653,6 +653,12 @@ doEstimateProportion3 <- function (output.dir, info_panel, cutpoint_min = 1,
                                             cutpoint_max = cutpoint_max, return_plot = FALSE,
                                             join = FALSE, traditional = TRUE)
 
+    if(any(grepl("[$]", channel))){
+      for(i in which(grepl("[$]", channel))){
+        gate_quadrant$gate_bg[[gate_quadrant$channel[i]]]@min <- gate_quadrant$gate_bg[[gate_quadrant$channel[i]]]@min*1.5
+      }
+    }
+
     apply_exp_quadran <- do_quadrant2(ff_experiment = ff_experiment, gate_quadrant = gate_quadrant$gate_bg, channel = gate_quadrant$channel, downsample = NULL)
 
     df_pattern <- data.frame(
@@ -670,13 +676,13 @@ doEstimateProportion3 <- function (output.dir, info_panel, cutpoint_min = 1,
       target4=aggregate(df_pattern$target4, by=list(df_pattern$ID), FUN=sum)$x
     )
 
-    if(all(grepl("+", channel))){
+    if(all(grepl("[+]", channel))){
       df_counts <- df_counts[, c(1, 5)]
       gate_flowClust <- apply_exp_quadran$gates$target4
-    }else if(all(grepl("-", channel))){
+    }else if(all(grepl("[-]", channel))){
       df_counts <- df_counts[, c(1, 2)]
       gate_flowClust <- apply_exp_quadran$gates$target1
-    }else if(grepl(channel[1], "+") & grepl(channel[1], "-")){
+    }else if(grepl(channel[1], "[+]") & grepl(channel[2], "[-]")){
       df_counts <- df_counts[, c(1, 3)]
       gate_flowClust <- apply_exp_quadran$gates$target2
     }else{
